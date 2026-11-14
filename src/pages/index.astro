@@ -1,0 +1,48 @@
+---
+// Biblioteca. ESQUELETO (Ola 0): lista simple. El stream de Biblioteca la completa.
+import App from '../layouts/App.astro';
+import { listBookmarks } from '../server/services/bookmarks.ts';
+
+const { app, user } = Astro.locals;
+const items = listBookmarks(app, user!.id);
+---
+
+<App title="Biblioteca" active="biblioteca">
+  <h1>Biblioteca</h1>
+  {
+    items.length === 0 ? (
+      <p>Todavía no guardaste ningún enlace. <a href="/guardar">Guarda el primero</a>.</p>
+    ) : (
+      <ul class="list" aria-label="Enlaces guardados">
+        {items.map((b) => (
+          <li data-bookmark-id={b.id}>
+            <a href={b.url} rel="noopener noreferrer" target="_blank">{b.title}</a>
+            <span class="domain">{b.domain}</span>
+          </li>
+        ))}
+      </ul>
+    )
+  }
+</App>
+
+<style>
+  .list {
+    list-style: none;
+    padding: 0;
+    display: grid;
+    gap: var(--s-2);
+  }
+  .list li {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--r-md);
+    padding: var(--s-3) var(--s-4);
+    display: flex;
+    gap: var(--s-3);
+    align-items: baseline;
+  }
+  .domain {
+    font: 400 12px var(--mf-mono);
+    color: var(--text-muted);
+  }
+</style>

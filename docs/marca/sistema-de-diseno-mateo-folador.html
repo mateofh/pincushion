@@ -1,0 +1,1832 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Sistema de Diseño · Mateo Folador</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=Inter+Tight:wght@500;600;700;800;900&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  /* =========================================================
+     MATEO FOLADOR — DESIGN SYSTEM
+     ========================================================= */
+  :root {
+    /* Brand */
+    --mf-blue:        #1F8BFF;   /* Azul eléctrico — acento principal */
+    --mf-blue-bright: #4DA8FF;   /* Hover / glow */
+    --mf-blue-deep:   #0A4FB8;   /* Press / sombra */
+    --mf-blue-soft:   #BEDEFF;   /* Highlight claro */
+
+    /* Ink (dark surfaces) */
+    --mf-ink-950: #0A0F1A;       /* Web background */
+    --mf-ink-900: #0F1623;       /* Card surface dark */
+    --mf-ink-800: #182030;       /* Elevated dark */
+    --mf-ink-700: #232C3D;       /* Border dark */
+    --mf-ink-500: #4A566B;       /* Muted text on dark */
+    --mf-ink-300: #8C97AD;       /* Secondary on dark */
+    --mf-ink-100: #D9DEE8;       /* Body on dark */
+    --mf-ink-000: #FFFFFF;
+
+    /* Paper (light editorial) */
+    --mf-paper:      #F4F7FB;    /* Carrusel background */
+    --mf-paper-warm: #FFFFFF;
+    --mf-paper-grid: #E3EAF3;    /* Grid lines */
+    --mf-graphite:   #11151C;    /* Text on light */
+    --mf-graphite-2: #2B3340;
+    --mf-graphite-3: #5A6473;
+
+    /* Accents */
+    --mf-warn:    #FF6B57;
+    --mf-success: #2ECC8B;
+    --mf-gold:    #F5C24A;       /* stars */
+
+    /* Type */
+    --mf-display: "Inter Tight", "Inter", system-ui, sans-serif;
+    --mf-text:    "Inter", system-ui, sans-serif;
+    --mf-mono:    "JetBrains Mono", ui-monospace, monospace;
+
+    /* Radius */
+    --r-sm: 6px;
+    --r-md: 12px;
+    --r-lg: 18px;
+    --r-xl: 28px;
+    --r-pill: 999px;
+
+    /* Spacing scale (8pt) */
+    --s-1: 4px; --s-2: 8px; --s-3: 12px; --s-4: 16px;
+    --s-5: 24px; --s-6: 32px; --s-7: 48px; --s-8: 64px;
+    --s-9: 96px; --s-10: 128px;
+
+    /* Shadow */
+    --shadow-soft: 0 1px 2px rgba(10,15,26,.06), 0 8px 24px rgba(10,15,26,.06);
+    --shadow-deep: 0 30px 60px -20px rgba(10,15,26,.45), 0 12px 24px -10px rgba(10,15,26,.3);
+    --glow-blue:   0 0 0 1px rgba(31,139,255,.35), 0 12px 40px -8px rgba(31,139,255,.55);
+  }
+
+  *, *::before, *::after { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; }
+  body {
+    font-family: var(--mf-text);
+    color: var(--mf-graphite);
+    background: var(--mf-paper);
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+    font-feature-settings: "ss01", "cv11";
+  }
+
+  img { display: block; max-width: 100%; }
+
+  /* -----  Page chrome  ----- */
+  .page {
+    max-width: 1280px;
+    margin: 0 auto;
+    padding: var(--s-9) var(--s-7) var(--s-10);
+  }
+
+  .doc-header {
+    display: grid;
+    grid-template-columns: 1.2fr .8fr;
+    gap: var(--s-7);
+    align-items: end;
+    padding-bottom: var(--s-7);
+    border-bottom: 1px solid var(--mf-paper-grid);
+    margin-bottom: var(--s-9);
+  }
+  .doc-eyebrow {
+    font-family: var(--mf-mono);
+    font-size: 12px;
+    letter-spacing: .14em;
+    text-transform: uppercase;
+    color: var(--mf-graphite-3);
+    margin-bottom: var(--s-5);
+    display: flex;
+    align-items: center;
+    gap: var(--s-3);
+  }
+  .doc-eyebrow::before {
+    content: "";
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    background: var(--mf-blue);
+    box-shadow: 0 0 0 4px rgba(31,139,255,.18);
+  }
+  .doc-title {
+    font-family: var(--mf-display);
+    font-size: clamp(56px, 7vw, 104px);
+    line-height: .92;
+    letter-spacing: -.035em;
+    font-weight: 800;
+    margin: 0 0 var(--s-5);
+    color: var(--mf-graphite);
+    text-wrap: balance;
+  }
+  .doc-title em {
+    font-style: normal;
+    color: var(--mf-blue);
+  }
+  .doc-meta {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: var(--s-5);
+    align-self: end;
+    padding-bottom: var(--s-2);
+  }
+  .doc-meta dt {
+    font-family: var(--mf-mono);
+    font-size: 11px;
+    letter-spacing: .12em;
+    text-transform: uppercase;
+    color: var(--mf-graphite-3);
+    margin-bottom: var(--s-1);
+  }
+  .doc-meta dd {
+    margin: 0;
+    font-size: 14px;
+    color: var(--mf-graphite);
+    font-weight: 500;
+  }
+
+  /* -----  Section scaffold  ----- */
+  .section { margin-bottom: var(--s-10); scroll-margin-top: 24px; }
+  .section-head {
+    display: grid;
+    grid-template-columns: 120px 1fr 1fr;
+    gap: var(--s-6);
+    align-items: baseline;
+    margin-bottom: var(--s-7);
+    padding-bottom: var(--s-5);
+    border-bottom: 1px solid var(--mf-paper-grid);
+  }
+  .section-num {
+    font-family: var(--mf-mono);
+    font-size: 13px;
+    color: var(--mf-blue);
+    letter-spacing: .08em;
+  }
+  .section-title {
+    font-family: var(--mf-display);
+    font-size: clamp(28px, 3vw, 40px);
+    font-weight: 700;
+    letter-spacing: -.025em;
+    margin: 0;
+    color: var(--mf-graphite);
+  }
+  .section-lede {
+    font-size: 15px;
+    color: var(--mf-graphite-3);
+    line-height: 1.55;
+    max-width: 42ch;
+    margin: 0;
+  }
+
+  /* =========================================================
+     LOGO
+     ========================================================= */
+  .logo-mark {
+    font-family: var(--mf-display);
+    font-weight: 800;
+    line-height: .9;
+    letter-spacing: -.02em;
+    text-transform: uppercase;
+    display: inline-block;
+  }
+  .logo-mark .l1 { display: block; }
+  .logo-mark .l2 { display: block; }
+
+  .logo-grid {
+    display: grid;
+    grid-template-columns: 1.4fr 1fr 1fr;
+    gap: var(--s-4);
+  }
+  .logo-card {
+    border-radius: var(--r-lg);
+    padding: var(--s-7);
+    display: flex;
+    flex-direction: column;
+    gap: var(--s-5);
+    min-height: 280px;
+    position: relative;
+    overflow: hidden;
+  }
+  .logo-card.is-dark { background: var(--mf-ink-950); color: white; }
+  .logo-card.is-dark::before {
+    content: "";
+    position: absolute; inset: 0;
+    background: radial-gradient(circle at 80% 20%, rgba(31,139,255,.18), transparent 50%);
+    pointer-events: none;
+  }
+  .logo-card.is-light { background: var(--mf-paper-warm); border: 1px solid var(--mf-paper-grid); }
+  .logo-card.is-blue { background: var(--mf-blue); color: white; }
+  .logo-card .label {
+    font-family: var(--mf-mono);
+    font-size: 11px;
+    letter-spacing: .12em;
+    text-transform: uppercase;
+    opacity: .7;
+    margin-top: auto;
+  }
+  .logo-card .preview { flex: 1; display: flex; align-items: center; justify-content: flex-start; }
+  .logo-card .preview .logo-mark { font-size: 32px; }
+  .logo-card.is-large .preview .logo-mark { font-size: 56px; }
+
+  .logo-mono {
+    width: 56px; height: 56px;
+    border-radius: 14px;
+    background: var(--mf-blue);
+    color: white;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-family: var(--mf-display);
+    font-weight: 800;
+    font-size: 22px;
+    letter-spacing: -.03em;
+    line-height: 1;
+  }
+  .logo-mono .stack { display: grid; line-height: .82; text-align: center; }
+
+  .logo-rules {
+    margin-top: var(--s-5);
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: var(--s-4);
+  }
+  .rule {
+    background: var(--mf-paper-warm);
+    border: 1px solid var(--mf-paper-grid);
+    border-radius: var(--r-md);
+    padding: var(--s-5);
+  }
+  .rule h4 {
+    font-size: 13px; font-weight: 600;
+    margin: 0 0 var(--s-2);
+    color: var(--mf-graphite);
+  }
+  .rule p { margin: 0; font-size: 13px; color: var(--mf-graphite-3); line-height: 1.5; }
+  .rule .demo {
+    height: 80px;
+    display: flex; align-items: center; justify-content: center;
+    margin-bottom: var(--s-3);
+    background: var(--mf-paper);
+    border-radius: var(--r-sm);
+    position: relative;
+  }
+  .rule .demo .logo-mark { font-size: 18px; }
+  .rule .demo.has-padding::before {
+    content: "";
+    position: absolute; inset: 12px;
+    border: 1px dashed var(--mf-blue);
+    border-radius: 4px;
+    opacity: .5;
+  }
+  .rule .demo .x {
+    color: var(--mf-warn);
+    position: absolute;
+    top: 6px; right: 8px;
+    font-size: 18px; font-weight: 700;
+  }
+  .rule.is-bad { background: #FFF5F3; }
+  .rule.is-bad h4 { color: var(--mf-warn); }
+
+  /* =========================================================
+     COLOR
+     ========================================================= */
+  .color-grid {
+    display: grid;
+    grid-template-columns: repeat(12, 1fr);
+    gap: var(--s-4);
+  }
+  .swatch {
+    border-radius: var(--r-md);
+    overflow: hidden;
+    background: var(--mf-paper-warm);
+    border: 1px solid var(--mf-paper-grid);
+    display: flex;
+    flex-direction: column;
+  }
+  .swatch .chip {
+    aspect-ratio: 4 / 3;
+    width: 100%;
+    position: relative;
+  }
+  .swatch .meta { padding: var(--s-4) var(--s-4) var(--s-4); }
+  .swatch .name {
+    font-size: 13px;
+    font-weight: 600;
+    margin: 0 0 2px;
+    color: var(--mf-graphite);
+  }
+  .swatch .hex {
+    font-family: var(--mf-mono);
+    font-size: 11px;
+    color: var(--mf-graphite-3);
+    text-transform: uppercase;
+  }
+  .swatch.size-hero { grid-column: span 6; }
+  .swatch.size-hero .chip { aspect-ratio: 16 / 9; }
+  .swatch.size-hero .name { font-size: 18px; }
+  .swatch.size-lg { grid-column: span 3; }
+  .swatch.size-md { grid-column: span 3; }
+  .swatch.size-sm { grid-column: span 2; }
+
+  .swatch .chip .role {
+    position: absolute;
+    top: var(--s-3); left: var(--s-3);
+    font-family: var(--mf-mono);
+    font-size: 10px;
+    letter-spacing: .14em;
+    text-transform: uppercase;
+    padding: 4px 8px;
+    border-radius: 4px;
+    background: rgba(255,255,255,.18);
+    backdrop-filter: blur(8px);
+    color: white;
+  }
+  .swatch .chip .role.dark-text {
+    background: rgba(10,15,26,.08);
+    color: var(--mf-graphite-2);
+  }
+
+  .palette-block + .palette-block { margin-top: var(--s-7); }
+  .palette-label {
+    font-family: var(--mf-mono);
+    font-size: 11px;
+    letter-spacing: .14em;
+    text-transform: uppercase;
+    color: var(--mf-graphite-3);
+    margin: 0 0 var(--s-4);
+    display: flex; align-items: center; gap: var(--s-3);
+  }
+  .palette-label::after {
+    content: "";
+    flex: 1;
+    height: 1px;
+    background: var(--mf-paper-grid);
+  }
+
+  .pair-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: var(--s-4);
+    margin-top: var(--s-6);
+  }
+  .pair {
+    border-radius: var(--r-md);
+    padding: var(--s-5);
+    min-height: 140px;
+    display: flex; flex-direction: column; justify-content: space-between;
+    font-family: var(--mf-display);
+  }
+  .pair .big { font-size: 32px; font-weight: 700; letter-spacing: -.02em; line-height: 1; }
+  .pair .small { font-size: 12px; opacity: .7; font-family: var(--mf-mono); }
+
+  /* =========================================================
+     TYPE
+     ========================================================= */
+  .type-stack { display: grid; gap: var(--s-5); }
+  .type-row {
+    display: grid;
+    grid-template-columns: 200px 1fr;
+    gap: var(--s-6);
+    padding: var(--s-5) 0;
+    border-bottom: 1px solid var(--mf-paper-grid);
+    align-items: baseline;
+  }
+  .type-row:last-child { border-bottom: 0; }
+  .type-row .specs {
+    font-family: var(--mf-mono);
+    font-size: 12px;
+    color: var(--mf-graphite-3);
+    line-height: 1.6;
+  }
+  .type-row .specs .lbl {
+    display: block;
+    font-size: 11px;
+    letter-spacing: .12em;
+    text-transform: uppercase;
+    color: var(--mf-graphite);
+    font-weight: 600;
+    margin-bottom: 4px;
+  }
+  .t-display-xl {
+    font-family: var(--mf-display);
+    font-size: 88px; font-weight: 800;
+    letter-spacing: -.035em;
+    line-height: .92;
+    margin: 0;
+    color: var(--mf-graphite);
+  }
+  .t-display { font-family: var(--mf-display); font-size: 56px; font-weight: 800; letter-spacing: -.03em; line-height: .98; margin: 0; }
+  .t-h1 { font-family: var(--mf-display); font-size: 40px; font-weight: 700; letter-spacing: -.02em; line-height: 1.05; margin: 0; }
+  .t-h2 { font-family: var(--mf-display); font-size: 28px; font-weight: 700; letter-spacing: -.01em; line-height: 1.15; margin: 0; }
+  .t-lead { font-family: var(--mf-text); font-size: 20px; font-weight: 400; line-height: 1.45; margin: 0; color: var(--mf-graphite-2); }
+  .t-body { font-family: var(--mf-text); font-size: 16px; font-weight: 400; line-height: 1.6; margin: 0; color: var(--mf-graphite-2); }
+  .t-small { font-family: var(--mf-text); font-size: 13px; font-weight: 500; line-height: 1.45; margin: 0; color: var(--mf-graphite-3); }
+  .t-mono { font-family: var(--mf-mono); font-size: 12px; letter-spacing: .14em; text-transform: uppercase; color: var(--mf-graphite-3); margin: 0; }
+
+  /* =========================================================
+     COMPONENTS
+     ========================================================= */
+  .stage {
+    border-radius: var(--r-lg);
+    padding: var(--s-7);
+    border: 1px solid var(--mf-paper-grid);
+    background: var(--mf-paper-warm);
+  }
+  .stage.is-dark {
+    background: var(--mf-ink-950);
+    border-color: var(--mf-ink-800);
+    color: var(--mf-ink-100);
+  }
+  .stage-label {
+    font-family: var(--mf-mono);
+    font-size: 11px;
+    letter-spacing: .12em;
+    text-transform: uppercase;
+    color: var(--mf-graphite-3);
+    margin: 0 0 var(--s-5);
+    display: flex; align-items: center; gap: var(--s-3);
+  }
+  .stage.is-dark .stage-label { color: var(--mf-ink-300); }
+  .stage-label .dot { width: 6px; height: 6px; border-radius: 50%; background: var(--mf-blue); }
+
+  /* Buttons */
+  .btn {
+    display: inline-flex; align-items: center; gap: 10px;
+    height: 48px;
+    padding: 0 22px;
+    border-radius: var(--r-pill);
+    font-family: var(--mf-text);
+    font-size: 15px;
+    font-weight: 600;
+    line-height: 1;
+    cursor: pointer;
+    border: 0;
+    transition: transform .08s ease, box-shadow .15s ease, background .15s ease;
+    white-space: nowrap;
+  }
+  .btn:active { transform: translateY(1px); }
+  .btn-primary {
+    background: var(--mf-blue);
+    color: white;
+    box-shadow: 0 8px 24px -8px rgba(31,139,255,.6);
+  }
+  .btn-primary:hover { background: var(--mf-blue-bright); box-shadow: 0 12px 32px -8px rgba(31,139,255,.8); }
+  .btn-secondary {
+    background: var(--mf-graphite);
+    color: white;
+  }
+  .btn-secondary:hover { background: #1f2737; }
+  .btn-ghost {
+    background: transparent;
+    color: var(--mf-graphite);
+    border: 1.5px solid var(--mf-graphite);
+  }
+  .btn-ghost:hover { background: var(--mf-graphite); color: white; }
+  .btn-ghost-light {
+    background: rgba(255,255,255,.08);
+    color: white;
+    border: 1px solid rgba(255,255,255,.18);
+    backdrop-filter: blur(8px);
+  }
+  .btn-ghost-light:hover { background: rgba(255,255,255,.16); }
+  .btn-sm { height: 36px; padding: 0 16px; font-size: 13px; }
+  .btn-lg { height: 56px; padding: 0 28px; font-size: 16px; }
+
+  .btn .arrow { transition: transform .15s ease; }
+  .btn:hover .arrow { transform: translateX(3px); }
+
+  .btn-row { display: flex; flex-wrap: wrap; gap: var(--s-3); align-items: center; }
+  .btn-row + .btn-row { margin-top: var(--s-4); }
+
+  /* Badges / Chips */
+  .badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    height: 28px;
+    padding: 0 12px;
+    border-radius: var(--r-pill);
+    font-size: 12px;
+    font-weight: 600;
+    font-family: var(--mf-text);
+    letter-spacing: .01em;
+  }
+  .badge-blue { background: rgba(31,139,255,.12); color: var(--mf-blue); }
+  .badge-dark { background: var(--mf-graphite); color: white; }
+  .badge-light { background: var(--mf-paper); color: var(--mf-graphite-2); border: 1px solid var(--mf-paper-grid); }
+  .badge-warn { background: rgba(255,107,87,.14); color: var(--mf-warn); }
+  .badge-success { background: rgba(46,204,139,.14); color: var(--mf-success); }
+  .badge .ico {
+    width: 6px; height: 6px; border-radius: 50%;
+    background: currentColor;
+  }
+
+  /* Cards */
+  .card-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: var(--s-4);
+  }
+
+  /* Stat Card */
+  .stat-card {
+    background: var(--mf-ink-900);
+    border: 1px solid var(--mf-ink-800);
+    border-radius: var(--r-lg);
+    padding: var(--s-6);
+    color: white;
+    position: relative;
+    overflow: hidden;
+  }
+  .stat-card::after {
+    content: "";
+    position: absolute;
+    bottom: -40%; right: -10%;
+    width: 70%; height: 100%;
+    background: radial-gradient(circle, rgba(31,139,255,.18) 0%, transparent 60%);
+    pointer-events: none;
+  }
+  .stat-card .num {
+    font-family: var(--mf-display);
+    font-size: 64px; font-weight: 800;
+    letter-spacing: -.03em;
+    line-height: 1;
+    background: linear-gradient(180deg, #fff 0%, #6BA8FF 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+  }
+  .stat-card .lbl {
+    font-size: 14px;
+    color: var(--mf-ink-300);
+    margin-top: var(--s-3);
+  }
+
+  /* Pillar Card */
+  .pillar-card {
+    background: var(--mf-ink-900);
+    border: 1px solid var(--mf-ink-800);
+    border-radius: var(--r-lg);
+    padding: var(--s-6);
+    color: white;
+    position: relative;
+  }
+  .pillar-card .ico-frame {
+    width: 44px; height: 44px;
+    border-radius: 10px;
+    background: rgba(31,139,255,.18);
+    color: var(--mf-blue);
+    display: inline-flex;
+    align-items: center; justify-content: center;
+    margin-bottom: var(--s-4);
+  }
+  .pillar-card h4 {
+    font-family: var(--mf-display);
+    font-size: 18px; font-weight: 700;
+    margin: 0 0 var(--s-2);
+    color: white;
+  }
+  .pillar-card p {
+    font-size: 13px;
+    color: var(--mf-ink-300);
+    line-height: 1.55;
+    margin: 0;
+  }
+
+  /* Testimonial */
+  .testimonial-card {
+    background: var(--mf-ink-900);
+    border: 1px solid var(--mf-ink-800);
+    border-radius: var(--r-lg);
+    padding: var(--s-6);
+    color: white;
+    display: flex; flex-direction: column; gap: var(--s-4);
+  }
+  .stars { display: flex; gap: 2px; color: var(--mf-gold); }
+  .testimonial-card .quote {
+    font-size: 14px; line-height: 1.55;
+    color: var(--mf-ink-100);
+    margin: 0;
+  }
+  .testimonial-card .person {
+    display: flex; align-items: center; gap: var(--s-3);
+    margin-top: auto;
+  }
+  .avatar {
+    width: 36px; height: 36px; border-radius: 50%;
+    background: linear-gradient(135deg, var(--mf-blue), #6BA8FF);
+    flex-shrink: 0;
+    display: flex; align-items: center; justify-content: center;
+    color: white; font-weight: 700; font-size: 13px;
+    font-family: var(--mf-display);
+  }
+  .testimonial-card .person .name {
+    font-size: 13px; font-weight: 600; color: white;
+    line-height: 1.2;
+  }
+  .testimonial-card .person .role {
+    font-size: 12px; color: var(--mf-ink-300);
+    line-height: 1.2;
+  }
+
+  /* =========================================================
+     SPACING / RADIUS
+     ========================================================= */
+  .tokens-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: var(--s-7);
+  }
+  .token-block { }
+  .token-block h3 {
+    font-family: var(--mf-display);
+    font-size: 18px;
+    font-weight: 700;
+    margin: 0 0 var(--s-5);
+  }
+  .scale-row {
+    display: grid;
+    grid-template-columns: 70px 60px 1fr;
+    gap: var(--s-4);
+    align-items: center;
+    padding: var(--s-3) 0;
+    border-bottom: 1px solid var(--mf-paper-grid);
+  }
+  .scale-row:last-child { border-bottom: 0; }
+  .scale-row .key { font-family: var(--mf-mono); font-size: 12px; color: var(--mf-graphite-2); font-weight: 600; }
+  .scale-row .val { font-family: var(--mf-mono); font-size: 12px; color: var(--mf-graphite-3); }
+  .scale-row .bar {
+    height: 14px;
+    background: var(--mf-blue);
+    border-radius: 3px;
+    opacity: .85;
+  }
+  .radius-row {
+    display: grid;
+    grid-template-columns: 70px 60px 1fr;
+    gap: var(--s-4);
+    align-items: center;
+    padding: var(--s-3) 0;
+    border-bottom: 1px solid var(--mf-paper-grid);
+  }
+  .radius-row:last-child { border-bottom: 0; }
+  .radius-row .demo {
+    height: 32px; width: 32px;
+    background: var(--mf-blue);
+    justify-self: end;
+  }
+
+  /* =========================================================
+     TEMPLATES — INSTAGRAM CARRUSEL
+     ========================================================= */
+  .templates-row {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: var(--s-5);
+    margin-bottom: var(--s-5);
+  }
+  .ig-frame {
+    aspect-ratio: 4 / 5;
+    border-radius: var(--r-md);
+    overflow: hidden;
+    position: relative;
+    box-shadow: var(--shadow-soft);
+  }
+  .ig-frame .ig-inner,
+  .ig-square .ig-inner {
+    position: absolute; inset: 0;
+    padding: 32px;
+    display: flex; flex-direction: column;
+    /* Each template overrides */
+  }
+  .ig-caption {
+    margin-top: var(--s-3);
+    font-family: var(--mf-mono);
+    font-size: 11px;
+    letter-spacing: .12em;
+    text-transform: uppercase;
+    color: var(--mf-graphite-3);
+  }
+
+  /* Template A — Light editorial (carrusel cuerpo) */
+  .ig-light {
+    background:
+      linear-gradient(180deg, transparent 70%, rgba(31,139,255,.18) 100%),
+      var(--mf-paper);
+    color: var(--mf-graphite);
+  }
+  .ig-light::before {
+    /* Grid background */
+    content: "";
+    position: absolute; inset: 0;
+    background-image:
+      linear-gradient(var(--mf-paper-grid) 1px, transparent 1px),
+      linear-gradient(90deg, var(--mf-paper-grid) 1px, transparent 1px);
+    background-size: 64px 64px;
+    opacity: .8;
+    pointer-events: none;
+  }
+  .ig-light .ig-inner > * { position: relative; }
+  .ig-handle-row {
+    display: flex; align-items: center; justify-content: space-between;
+    margin-bottom: 28px;
+  }
+  .handle {
+    display: flex; align-items: center; gap: 10px;
+    font-weight: 700;
+    font-size: 13px;
+    letter-spacing: .04em;
+  }
+  .handle .av {
+    width: 32px; height: 32px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #2B3340, #5A6473);
+    flex-shrink: 0;
+    border: 1px solid var(--mf-paper-grid);
+  }
+  .ig-logo-stack {
+    font-family: var(--mf-display);
+    font-weight: 800;
+    font-size: 14px;
+    letter-spacing: -.01em;
+    line-height: .9;
+    text-transform: uppercase;
+    text-align: right;
+  }
+
+  .ig-h {
+    font-family: var(--mf-display);
+    font-size: 38px;
+    font-weight: 800;
+    letter-spacing: -.025em;
+    line-height: 1;
+    margin: 0 0 24px;
+  }
+  .ig-quotes {
+    font-family: var(--mf-display);
+    font-size: 19px;
+    font-weight: 500;
+    letter-spacing: -.01em;
+    line-height: 1.35;
+    margin: 0;
+  }
+  .ig-quotes p { margin: 0 0 6px; }
+
+  .ig-callout {
+    background: var(--mf-graphite);
+    color: white;
+    padding: 18px 22px;
+    border-radius: 10px;
+    margin-top: auto;
+    font-family: var(--mf-display);
+    font-size: 14px;
+    line-height: 1.4;
+  }
+  .ig-callout .head { font-weight: 600; margin-bottom: 8px; }
+  .ig-callout ul { margin: 0; padding: 0; list-style: none; }
+  .ig-callout li {
+    padding-left: 16px;
+    position: relative;
+    margin-bottom: 4px;
+  }
+  .ig-callout li::before {
+    content: "";
+    position: absolute;
+    left: 0; top: 8px;
+    width: 6px; height: 6px;
+    border-radius: 50%;
+    background: var(--mf-blue);
+  }
+  .ig-arrow {
+    position: absolute;
+    bottom: 24px; right: 24px;
+    color: var(--mf-graphite);
+    font-size: 18px;
+  }
+
+  /* Template B — Dark CTA */
+  .ig-dark {
+    background:
+      radial-gradient(ellipse 60% 80% at 0% 100%, rgba(31,139,255,.55) 0%, transparent 55%),
+      var(--mf-ink-950);
+    color: white;
+  }
+  .ig-dark::before {
+    content: "";
+    position: absolute; inset: 0;
+    background-image:
+      linear-gradient(rgba(255,255,255,.04) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(255,255,255,.04) 1px, transparent 1px);
+    background-size: 72px 72px;
+    pointer-events: none;
+  }
+  .ig-dark .ig-inner > * { position: relative; }
+  .ig-dark .ig-logo-stack { text-align: left; }
+  .ig-dark .ig-h {
+    font-size: 42px;
+    margin: 36px 0 24px;
+  }
+  .ig-dark .ig-h .accent { color: var(--mf-blue); }
+  .ig-dark .copy-block {
+    background: rgba(255,255,255,.06);
+    border-left: 0;
+    padding: 16px 20px;
+    border-radius: 8px;
+    font-size: 14px;
+    line-height: 1.45;
+    margin-bottom: 14px;
+    backdrop-filter: blur(8px);
+  }
+  .ig-dark .copy-block strong { font-weight: 700; }
+  .ig-dark .cta-block {
+    background: rgba(255,255,255,.06);
+    padding: 16px 20px;
+    border-radius: 8px;
+    font-size: 14px;
+    line-height: 1.45;
+    backdrop-filter: blur(8px);
+  }
+  .ig-dark .cta-block em {
+    font-style: italic;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: .04em;
+  }
+  .ig-dark .handle-bottom {
+    margin-top: auto;
+    font-weight: 800;
+    font-size: 14px;
+    letter-spacing: .06em;
+    text-align: right;
+    color: white;
+  }
+
+  /* Template C — Cover */
+  .ig-cover {
+    background:
+      linear-gradient(180deg, rgba(10,15,26,0) 50%, rgba(10,15,26,.75) 100%),
+      radial-gradient(ellipse at 60% 30%, rgba(31,139,255,.35) 0%, transparent 50%),
+      var(--mf-ink-950);
+    color: white;
+  }
+  .ig-cover::before {
+    content: "";
+    position: absolute; inset: 0;
+    background-image:
+      linear-gradient(rgba(255,255,255,.05) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(255,255,255,.05) 1px, transparent 1px);
+    background-size: 80px 80px;
+    pointer-events: none;
+  }
+  .ig-cover .ig-inner > * { position: relative; }
+  .ig-cover .number {
+    font-family: var(--mf-mono);
+    font-size: 12px;
+    letter-spacing: .2em;
+    color: var(--mf-blue);
+    margin-bottom: 18px;
+  }
+  .ig-cover .cover-h {
+    font-family: var(--mf-display);
+    font-weight: 800;
+    font-size: 56px;
+    line-height: .94;
+    letter-spacing: -.035em;
+    margin: 0;
+  }
+  .ig-cover .cover-h em { font-style: normal; color: var(--mf-blue); }
+  .ig-cover .cover-sub {
+    margin-top: 18px;
+    font-size: 14px;
+    line-height: 1.45;
+    max-width: 22ch;
+    color: rgba(255,255,255,.85);
+  }
+  .ig-cover .swipe {
+    margin-top: auto;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    font-family: var(--mf-mono);
+    font-size: 11px;
+    letter-spacing: .14em;
+    text-transform: uppercase;
+    color: var(--mf-blue);
+  }
+  .ig-cover .swipe .arrow {
+    width: 24px; height: 24px;
+    border-radius: 50%;
+    border: 1px solid var(--mf-blue);
+    display: inline-flex; align-items: center; justify-content: center;
+  }
+
+  /* Square post template */
+  .post-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: var(--s-5);
+    margin-top: var(--s-7);
+  }
+  .ig-square {
+    aspect-ratio: 1;
+    border-radius: var(--r-md);
+    overflow: hidden;
+    position: relative;
+    box-shadow: var(--shadow-soft);
+  }
+  .ig-square .ig-inner { padding: 36px; }
+
+  .ig-quote-post {
+    background: var(--mf-paper-warm);
+    color: var(--mf-graphite);
+  }
+  .ig-quote-post::before {
+    content: "";
+    position: absolute; inset: 0;
+    background-image:
+      linear-gradient(var(--mf-paper-grid) 1px, transparent 1px),
+      linear-gradient(90deg, var(--mf-paper-grid) 1px, transparent 1px);
+    background-size: 56px 56px;
+    pointer-events: none;
+  }
+  .ig-quote-post .ig-inner > * { position: relative; }
+  .ig-quote-post .big-quote {
+    font-family: var(--mf-display);
+    font-weight: 800;
+    font-size: 40px;
+    line-height: 1;
+    letter-spacing: -.025em;
+    margin: 0;
+  }
+  .ig-quote-post .big-quote em { font-style: normal; color: var(--mf-blue); }
+  .ig-quote-post .footer {
+    margin-top: auto;
+    display: flex; justify-content: space-between; align-items: end;
+    font-size: 12px;
+  }
+  .ig-quote-post .footer .signature {
+    font-family: var(--mf-display);
+    font-weight: 700;
+    line-height: 1;
+    text-transform: uppercase;
+  }
+
+  .ig-stat-post {
+    background: var(--mf-ink-950);
+    color: white;
+  }
+  .ig-stat-post::before {
+    content: "";
+    position: absolute; inset: 0;
+    background:
+      radial-gradient(ellipse at 100% 0%, rgba(31,139,255,.4) 0%, transparent 50%);
+    pointer-events: none;
+  }
+  .ig-stat-post .ig-inner > * { position: relative; }
+  .ig-stat-post .stat-num {
+    font-family: var(--mf-display);
+    font-weight: 800;
+    font-size: 140px;
+    line-height: .9;
+    letter-spacing: -.04em;
+    background: linear-gradient(180deg, #fff, var(--mf-blue));
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+    margin: auto 0;
+  }
+  .ig-stat-post .stat-lbl {
+    font-family: var(--mf-display);
+    font-size: 18px;
+    font-weight: 600;
+    line-height: 1.3;
+    margin-top: 12px;
+  }
+
+  /* =========================================================
+     WEB TEMPLATES
+     ========================================================= */
+  .web-frame {
+    border-radius: var(--r-lg);
+    overflow: hidden;
+    background: var(--mf-ink-950);
+    color: white;
+    border: 1px solid var(--mf-ink-800);
+  }
+  .web-frame .browser-bar {
+    background: #060A12;
+    padding: 12px 16px;
+    display: flex; align-items: center; gap: 8px;
+    border-bottom: 1px solid var(--mf-ink-800);
+  }
+  .web-frame .browser-bar .dots {
+    display: flex; gap: 6px;
+  }
+  .web-frame .browser-bar .dots span {
+    width: 11px; height: 11px; border-radius: 50%;
+    background: #2B3442;
+  }
+  .web-frame .browser-bar .url {
+    flex: 1;
+    background: var(--mf-ink-800);
+    height: 26px;
+    border-radius: 999px;
+    display: flex; align-items: center;
+    padding: 0 14px;
+    font-family: var(--mf-mono);
+    font-size: 11px;
+    color: var(--mf-ink-300);
+  }
+
+  .web-nav {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 22px 32px;
+    border-bottom: 1px solid var(--mf-ink-800);
+  }
+  .web-nav .left { display: flex; align-items: center; gap: 32px; }
+  .web-nav .nav-logo {
+    font-family: var(--mf-display);
+    font-weight: 800;
+    font-size: 13px;
+    line-height: .85;
+    letter-spacing: -.01em;
+    text-transform: uppercase;
+  }
+  .web-nav ul {
+    margin: 0; padding: 0; list-style: none;
+    display: flex; gap: 24px;
+    font-size: 13px;
+    color: var(--mf-ink-100);
+  }
+  .web-nav ul li { font-weight: 500; }
+  .web-nav ul li.active { color: var(--mf-blue); }
+
+  .web-hero {
+    padding: 64px 56px 80px;
+    position: relative;
+    overflow: hidden;
+    min-height: 380px;
+  }
+  .web-hero::before {
+    content: "";
+    position: absolute;
+    right: -10%; top: -10%;
+    width: 60%; height: 120%;
+    background:
+      radial-gradient(circle at 50% 50%, rgba(31,139,255,.22) 0%, transparent 60%);
+    pointer-events: none;
+  }
+  .web-hero h1 {
+    font-family: var(--mf-display);
+    font-weight: 800;
+    font-size: 56px;
+    letter-spacing: -.03em;
+    line-height: 1;
+    margin: 0 0 20px;
+    max-width: 14ch;
+  }
+  .web-hero h1 em { font-style: normal; color: var(--mf-blue); }
+  .web-hero p {
+    color: var(--mf-ink-100);
+    font-size: 16px;
+    line-height: 1.55;
+    max-width: 44ch;
+    margin: 0 0 28px;
+  }
+
+  .web-stats {
+    background: var(--mf-paper);
+    color: var(--mf-graphite);
+    padding: 56px;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 40px;
+    align-items: center;
+  }
+  .web-stats h2 {
+    font-family: var(--mf-display);
+    font-weight: 700;
+    font-size: 36px;
+    line-height: 1;
+    letter-spacing: -.02em;
+    margin: 0;
+  }
+  .web-stats h2 em { font-style: normal; color: var(--mf-blue); }
+  .web-stats .stats-row {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 16px;
+  }
+  .web-stats .stat-tile {
+    background: var(--mf-ink-950);
+    color: white;
+    border-radius: 14px;
+    padding: 24px;
+    position: relative;
+    overflow: hidden;
+  }
+  .web-stats .stat-tile .n {
+    font-family: var(--mf-display);
+    font-size: 36px; font-weight: 800;
+    letter-spacing: -.025em;
+    background: linear-gradient(180deg, #fff, var(--mf-blue));
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+  }
+  .web-stats .stat-tile .l {
+    font-size: 11px;
+    color: var(--mf-ink-300);
+    margin-top: 6px;
+  }
+
+  /* =========================================================
+     ICONS (SVG)
+     ========================================================= */
+  .icon { width: 18px; height: 18px; stroke-width: 2; }
+  .icon-lg { width: 22px; height: 22px; }
+  .icon-xl { width: 28px; height: 28px; }
+
+  /* =========================================================
+     UTILITIES
+     ========================================================= */
+  .mt-3 { margin-top: var(--s-3); }
+  .mt-5 { margin-top: var(--s-5); }
+  .mt-6 { margin-top: var(--s-6); }
+  .mt-7 { margin-top: var(--s-7); }
+  .mb-5 { margin-bottom: var(--s-5); }
+
+  .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: var(--s-5); }
+  .grid-3 { display: grid; grid-template-columns: repeat(3,1fr); gap: var(--s-5); }
+  .grid-4 { display: grid; grid-template-columns: repeat(4,1fr); gap: var(--s-4); }
+
+  .footer {
+    margin-top: var(--s-10);
+    padding-top: var(--s-7);
+    border-top: 1px solid var(--mf-paper-grid);
+    display: flex; justify-content: space-between; align-items: end;
+    color: var(--mf-graphite-3);
+    font-family: var(--mf-mono);
+    font-size: 11px;
+    letter-spacing: .08em;
+    text-transform: uppercase;
+  }
+</style>
+</head>
+<body>
+<main class="page">
+
+  <!-- ============== HEADER ============== -->
+  <header class="doc-header">
+    <div>
+      <div class="doc-eyebrow">Design System · v1.0</div>
+      <h1 class="doc-title">Mateo<br/>Folador<br/><em>Design System</em></h1>
+    </div>
+    <dl class="doc-meta">
+      <div><dt>Marca</dt><dd>Mateo Folador</dd></div>
+      <div><dt>Categoría</dt><dd>Personal brand · IA &amp; transformación</dd></div>
+      <div><dt>Aplicación</dt><dd>Web, Instagram, decks, PDFs</dd></div>
+      <div><dt>Última revisión</dt><dd>Mayo 2026</dd></div>
+    </dl>
+  </header>
+
+  <!-- ============== 01 PRINCIPIOS ============== -->
+  <section class="section">
+    <header class="section-head">
+      <span class="section-num">01 / Principios</span>
+      <h2 class="section-title">Autoridad clara, lenguaje cercano.</h2>
+      <p class="section-lede">Mateo opera entre dos mundos: el rigor tech-corporativo de la web y el tono didáctico, conversacional de los carruseles de Instagram. El sistema vive en esa tensión productiva.</p>
+    </header>
+
+    <div class="grid-3">
+      <div class="rule">
+        <h4>Tipo grande, claro, contundente.</h4>
+        <p>Los titulares mandan. Bold, apretado en letter-spacing, alineado a la izquierda. La tipografía hace el peso visual; los adornos sobran.</p>
+      </div>
+      <div class="rule">
+        <h4>Azul con propósito.</h4>
+        <p>El azul eléctrico señala lo que importa: una palabra clave, un CTA, un dato. Nunca llena bloques; subraya.</p>
+      </div>
+      <div class="rule">
+        <h4>Grilla siempre presente.</h4>
+        <p>Una retícula sutil de fondo —en claro u oscuro— ancla la marca en lo técnico. Es el ADN de la tarjeta de visita.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============== 02 LOGO ============== -->
+  <section class="section">
+    <header class="section-head">
+      <span class="section-num">02 / Logo</span>
+      <h2 class="section-title">El bloque tipográfico.</h2>
+      <p class="section-lede">Dos líneas, mayúsculas, peso 800, tracking apretado. Nombre y apellido del mismo tamaño — Mateo Folador es un solo bloque de autoridad.</p>
+    </header>
+
+    <div class="logo-grid">
+      <div class="logo-card is-dark is-large">
+        <div class="preview">
+          <span class="logo-mark"><span class="l1">Mateo</span><span class="l2">Folador</span></span>
+        </div>
+        <span class="label">Primario · sobre fondo oscuro</span>
+      </div>
+      <div class="logo-card is-light">
+        <div class="preview">
+          <span class="logo-mark" style="font-size:36px;"><span class="l1">Mateo</span><span class="l2">Folador</span></span>
+        </div>
+        <span class="label" style="color: var(--mf-graphite-3);">Sobre paper</span>
+      </div>
+      <div class="logo-card is-blue">
+        <div class="preview">
+          <span class="logo-mark" style="font-size:36px;"><span class="l1">Mateo</span><span class="l2">Folador</span></span>
+        </div>
+        <span class="label">Reverso · sobre azul</span>
+      </div>
+    </div>
+
+    <div class="logo-rules">
+      <div class="rule">
+        <div class="demo has-padding">
+          <span class="logo-mark"><span class="l1">Mateo</span><span class="l2">Folador</span></span>
+        </div>
+        <h4>Aire mínimo</h4>
+        <p>Mantener al menos la altura de la "M" como margen libre alrededor del bloque.</p>
+      </div>
+      <div class="rule">
+        <div class="demo">
+          <span class="logo-mono"><span class="stack"><span>M</span><span>F</span></span></span>
+        </div>
+        <h4>Variante avatar</h4>
+        <p>"MF" apilado en cuadrado azul. Para perfiles, favicons y aplicaciones a tamaño reducido (&lt;32px).</p>
+      </div>
+      <div class="rule is-bad">
+        <div class="demo">
+          <span class="x">✕</span>
+          <span class="logo-mark" style="font-style: italic; transform: skewX(-8deg); color: #FF6B57;">
+            <span class="l1">Mateo</span><span class="l2">Folador</span>
+          </span>
+        </div>
+        <h4>Lo que no se hace</h4>
+        <p>No deformar, italizar, agregar contornos, sombras ni colores fuera del sistema.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============== 03 COLOR ============== -->
+  <section class="section">
+    <header class="section-head">
+      <span class="section-num">03 / Color</span>
+      <h2 class="section-title">Azul eléctrico sobre tinta.</h2>
+      <p class="section-lede">Un único acento de marca. Dos territorios neutros: <em>Ink</em> (la web, los CTAs nocturnos) y <em>Paper</em> (los carruseles editoriales).</p>
+    </header>
+
+    <div class="palette-block">
+      <p class="palette-label">Acento de marca</p>
+      <div class="color-grid">
+        <div class="swatch size-hero">
+          <div class="chip" style="background: #1F8BFF;">
+            <span class="role">— Brand 500 — Acento principal</span>
+          </div>
+          <div class="meta">
+            <p class="name">Folador Blue</p>
+            <p class="hex">#1F8BFF · oklch(.65 .19 245)</p>
+          </div>
+        </div>
+        <div class="swatch size-md">
+          <div class="chip" style="background: #4DA8FF;"><span class="role">Hover</span></div>
+          <div class="meta"><p class="name">Blue Bright</p><p class="hex">#4DA8FF</p></div>
+        </div>
+        <div class="swatch size-md">
+          <div class="chip" style="background: #0A4FB8;"><span class="role">Press</span></div>
+          <div class="meta"><p class="name">Blue Deep</p><p class="hex">#0A4FB8</p></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="palette-block">
+      <p class="palette-label">Ink — escala oscura</p>
+      <div class="color-grid">
+        <div class="swatch size-sm"><div class="chip" style="background:#0A0F1A;"><span class="role">Bg</span></div><div class="meta"><p class="name">Ink 950</p><p class="hex">#0A0F1A</p></div></div>
+        <div class="swatch size-sm"><div class="chip" style="background:#0F1623;"></div><div class="meta"><p class="name">Ink 900</p><p class="hex">#0F1623</p></div></div>
+        <div class="swatch size-sm"><div class="chip" style="background:#182030;"></div><div class="meta"><p class="name">Ink 800</p><p class="hex">#182030</p></div></div>
+        <div class="swatch size-sm"><div class="chip" style="background:#232C3D;"></div><div class="meta"><p class="name">Ink 700</p><p class="hex">#232C3D</p></div></div>
+        <div class="swatch size-sm"><div class="chip" style="background:#4A566B;"></div><div class="meta"><p class="name">Ink 500</p><p class="hex">#4A566B</p></div></div>
+        <div class="swatch size-sm"><div class="chip" style="background:#8C97AD;"></div><div class="meta"><p class="name">Ink 300</p><p class="hex">#8C97AD</p></div></div>
+      </div>
+    </div>
+
+    <div class="palette-block">
+      <p class="palette-label">Paper — escala clara</p>
+      <div class="color-grid">
+        <div class="swatch size-sm"><div class="chip" style="background:#FFFFFF; border: 1px solid var(--mf-paper-grid);"><span class="role dark-text">Card</span></div><div class="meta"><p class="name">Paper 0</p><p class="hex">#FFFFFF</p></div></div>
+        <div class="swatch size-sm"><div class="chip" style="background:#F4F7FB;"><span class="role dark-text">Bg</span></div><div class="meta"><p class="name">Paper 50</p><p class="hex">#F4F7FB</p></div></div>
+        <div class="swatch size-sm"><div class="chip" style="background:#E3EAF3;"><span class="role dark-text">Grid</span></div><div class="meta"><p class="name">Paper 100</p><p class="hex">#E3EAF3</p></div></div>
+        <div class="swatch size-sm"><div class="chip" style="background:#5A6473;"></div><div class="meta"><p class="name">Graphite 3</p><p class="hex">#5A6473</p></div></div>
+        <div class="swatch size-sm"><div class="chip" style="background:#2B3340;"></div><div class="meta"><p class="name">Graphite 2</p><p class="hex">#2B3340</p></div></div>
+        <div class="swatch size-sm"><div class="chip" style="background:#11151C;"></div><div class="meta"><p class="name">Graphite</p><p class="hex">#11151C</p></div></div>
+      </div>
+    </div>
+
+    <div class="palette-block">
+      <p class="palette-label">Funcionales · uso quirúrgico</p>
+      <div class="color-grid">
+        <div class="swatch size-md"><div class="chip" style="background:#FF6B57;"></div><div class="meta"><p class="name">Warn</p><p class="hex">#FF6B57</p></div></div>
+        <div class="swatch size-md"><div class="chip" style="background:#2ECC8B;"></div><div class="meta"><p class="name">Success</p><p class="hex">#2ECC8B</p></div></div>
+        <div class="swatch size-md"><div class="chip" style="background:#F5C24A;"></div><div class="meta"><p class="name">Gold</p><p class="hex">#F5C24A</p></div></div>
+      </div>
+    </div>
+
+    <p class="palette-label mt-7">Pares aprobados</p>
+    <div class="pair-grid">
+      <div class="pair" style="background: #0A0F1A; color: white;">
+        <span class="big">Aa</span>
+        <span class="small">Ink 950 + White<br/>AAA</span>
+      </div>
+      <div class="pair" style="background: #0A0F1A; color: #1F8BFF;">
+        <span class="big">Aa</span>
+        <span class="small">Ink 950 + Blue 500<br/>Acento</span>
+      </div>
+      <div class="pair" style="background: #F4F7FB; color: #11151C;">
+        <span class="big">Aa</span>
+        <span class="small">Paper 50 + Graphite<br/>AAA</span>
+      </div>
+      <div class="pair" style="background: #1F8BFF; color: white;">
+        <span class="big">Aa</span>
+        <span class="small">Blue 500 + White<br/>AA</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============== 04 TIPOGRAFÍA ============== -->
+  <section class="section">
+    <header class="section-head">
+      <span class="section-num">04 / Tipografía</span>
+      <h2 class="section-title">Inter Tight para titular, Inter para hablar.</h2>
+      <p class="section-lede">Una sola familia con dos cortes. Inter Tight cierra el tracking en titulares grandes; Inter mantiene la legibilidad en cuerpo. Mono solo para metadatos.</p>
+    </header>
+
+    <div class="grid-2 mb-5">
+      <div class="stage" style="padding: var(--s-7);">
+        <p class="stage-label"><span class="dot"></span>Display · Inter Tight 800</p>
+        <p style="font-family: var(--mf-display); font-size: 96px; font-weight: 800; letter-spacing: -.04em; line-height: .9; margin: 0; color: var(--mf-graphite);">Aa</p>
+        <p class="t-mono mt-5">aábcdefghijklmnñopqrstuvwxyz<br/>0123456789 · ¿?¡!&amp;@</p>
+      </div>
+      <div class="stage" style="padding: var(--s-7);">
+        <p class="stage-label"><span class="dot"></span>Text · Inter 400/500/600</p>
+        <p style="font-family: var(--mf-text); font-size: 96px; font-weight: 500; letter-spacing: -.02em; line-height: .9; margin: 0; color: var(--mf-graphite);">Aa</p>
+        <p class="t-mono mt-5">aábcdefghijklmnñopqrstuvwxyz<br/>0123456789 · ¿?¡!&amp;@</p>
+      </div>
+    </div>
+
+    <div class="stage type-stack">
+      <div class="type-row">
+        <div class="specs">
+          <span class="lbl">Display XL</span>
+          Inter Tight 800<br/>88 / 92 · -3.5%<br/>Hero web
+        </div>
+        <p class="t-display-xl">Redefiní lo posible.</p>
+      </div>
+      <div class="type-row">
+        <div class="specs">
+          <span class="lbl">Display</span>
+          Inter Tight 800<br/>56 / 56 · -3%<br/>Portadas de carrusel
+        </div>
+        <p class="t-display">Falsa sensación de control.</p>
+      </div>
+      <div class="type-row">
+        <div class="specs">
+          <span class="lbl">H1 · Section</span>
+          Inter Tight 700<br/>40 / 44 · -2%
+        </div>
+        <p class="t-h1">Las 4 columnas de la excelencia con IA.</p>
+      </div>
+      <div class="type-row">
+        <div class="specs">
+          <span class="lbl">H2 · Card</span>
+          Inter Tight 700<br/>28 / 32 · -1%
+        </div>
+        <p class="t-h2">Empresas que ya confiaron.</p>
+      </div>
+      <div class="type-row">
+        <div class="specs">
+          <span class="lbl">Lead</span>
+          Inter 400<br/>20 / 30
+        </div>
+        <p class="t-lead">Una herramienta para auditar tus riesgos en menos de cinco minutos.</p>
+      </div>
+      <div class="type-row">
+        <div class="specs">
+          <span class="lbl">Body</span>
+          Inter 400<br/>16 / 26
+        </div>
+        <p class="t-body">"Mi equipo ya usa IA." "Hicimos una capacitación." "Tenemos términos y condiciones." Pero la mayoría no controla qué datos se usan, quién accede ni cómo se audita.</p>
+      </div>
+      <div class="type-row">
+        <div class="specs">
+          <span class="lbl">Small</span>
+          Inter 500<br/>13 / 19
+        </div>
+        <p class="t-small">Material auxiliar, captions y notas al pie.</p>
+      </div>
+      <div class="type-row">
+        <div class="specs">
+          <span class="lbl">Mono / Eyebrow</span>
+          JetBrains Mono 500<br/>12 / — · +14%
+        </div>
+        <p class="t-mono">Categoría · Sección · Tag</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============== 05 SPACING & RADIUS ============== -->
+  <section class="section">
+    <header class="section-head">
+      <span class="section-num">05 / Tokens</span>
+      <h2 class="section-title">Spacing, radii, sombras.</h2>
+      <p class="section-lede">Escala de 8 pt. Radios suaves para superficies, pill para botones. Sombras profundas sólo en modo oscuro, con tinte azul.</p>
+    </header>
+
+    <div class="tokens-grid">
+      <div class="token-block stage">
+        <h3>Espaciado — escala 8pt</h3>
+        <div class="scale-row"><span class="key">--s-1</span><span class="val">4 px</span><span class="bar" style="width:4px;"></span></div>
+        <div class="scale-row"><span class="key">--s-2</span><span class="val">8 px</span><span class="bar" style="width:8px;"></span></div>
+        <div class="scale-row"><span class="key">--s-3</span><span class="val">12 px</span><span class="bar" style="width:12px;"></span></div>
+        <div class="scale-row"><span class="key">--s-4</span><span class="val">16 px</span><span class="bar" style="width:16px;"></span></div>
+        <div class="scale-row"><span class="key">--s-5</span><span class="val">24 px</span><span class="bar" style="width:24px;"></span></div>
+        <div class="scale-row"><span class="key">--s-6</span><span class="val">32 px</span><span class="bar" style="width:32px;"></span></div>
+        <div class="scale-row"><span class="key">--s-7</span><span class="val">48 px</span><span class="bar" style="width:48px;"></span></div>
+        <div class="scale-row"><span class="key">--s-8</span><span class="val">64 px</span><span class="bar" style="width:64px;"></span></div>
+        <div class="scale-row"><span class="key">--s-9</span><span class="val">96 px</span><span class="bar" style="width:96px;"></span></div>
+        <div class="scale-row"><span class="key">--s-10</span><span class="val">128 px</span><span class="bar" style="width:128px;"></span></div>
+      </div>
+      <div class="token-block stage">
+        <h3>Radius</h3>
+        <div class="radius-row"><span class="key">--r-sm</span><span class="val">6 px</span><span class="demo" style="border-radius:6px;"></span></div>
+        <div class="radius-row"><span class="key">--r-md</span><span class="val">12 px</span><span class="demo" style="border-radius:12px;"></span></div>
+        <div class="radius-row"><span class="key">--r-lg</span><span class="val">18 px</span><span class="demo" style="border-radius:18px;"></span></div>
+        <div class="radius-row"><span class="key">--r-xl</span><span class="val">28 px</span><span class="demo" style="border-radius:28px;"></span></div>
+        <div class="radius-row"><span class="key">--r-pill</span><span class="val">999 px</span><span class="demo" style="border-radius:999px;"></span></div>
+
+        <h3 style="margin-top: var(--s-7);">Sombras</h3>
+        <div class="grid-3" style="gap: var(--s-3); margin-top: var(--s-3);">
+          <div style="height: 70px; border-radius: 12px; background:#fff; box-shadow: var(--shadow-soft); display: flex; align-items: center; justify-content: center; font-family: var(--mf-mono); font-size: 11px; color: var(--mf-graphite-3);">soft</div>
+          <div style="height: 70px; border-radius: 12px; background: var(--mf-ink-900); color: var(--mf-ink-300); box-shadow: var(--shadow-deep); display: flex; align-items: center; justify-content: center; font-family: var(--mf-mono); font-size: 11px;">deep</div>
+          <div style="height: 70px; border-radius: 12px; background: var(--mf-blue); color: white; box-shadow: var(--glow-blue); display: flex; align-items: center; justify-content: center; font-family: var(--mf-mono); font-size: 11px;">glow</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============== 06 COMPONENTES ============== -->
+  <section class="section">
+    <header class="section-head">
+      <span class="section-num">06 / Componentes</span>
+      <h2 class="section-title">Botones, badges, tarjetas.</h2>
+      <p class="section-lede">Componentes núcleo, presentados sobre paper y sobre ink. Mismas APIs en ambos territorios.</p>
+    </header>
+
+    <!-- Buttons -->
+    <div class="grid-2 mb-5">
+      <div class="stage">
+        <p class="stage-label"><span class="dot"></span>Botones · Paper</p>
+        <div class="btn-row">
+          <button class="btn btn-primary">Empieza ahora <svg class="icon arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M5 12h14M13 6l6 6-6 6" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+          <button class="btn btn-secondary">Ver más</button>
+          <button class="btn btn-ghost">Saber más</button>
+        </div>
+        <div class="btn-row">
+          <button class="btn btn-primary btn-sm">Sm</button>
+          <button class="btn btn-primary">Md (default)</button>
+          <button class="btn btn-primary btn-lg">Large</button>
+        </div>
+      </div>
+      <div class="stage is-dark">
+        <p class="stage-label"><span class="dot"></span>Botones · Ink</p>
+        <div class="btn-row">
+          <button class="btn btn-primary">Agendar diagnóstico <svg class="icon arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M5 12h14M13 6l6 6-6 6" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+          <button class="btn btn-ghost-light">Ver casos</button>
+          <button class="btn btn-ghost-light btn-sm">Login</button>
+        </div>
+        <p class="t-mono mt-5" style="color: var(--mf-ink-300);">Sobre fondo oscuro, evitar el secondary negro. Usar primary + ghost light.</p>
+      </div>
+    </div>
+
+    <!-- Badges -->
+    <div class="grid-2 mb-5">
+      <div class="stage">
+        <p class="stage-label"><span class="dot"></span>Badges</p>
+        <div class="btn-row">
+          <span class="badge badge-blue"><span class="ico"></span>Nuevo</span>
+          <span class="badge badge-dark">Featured</span>
+          <span class="badge badge-light">Categoría</span>
+          <span class="badge badge-success"><span class="ico"></span>En vivo</span>
+          <span class="badge badge-warn"><span class="ico"></span>Atención</span>
+        </div>
+      </div>
+      <div class="stage">
+        <p class="stage-label"><span class="dot"></span>Eyebrows &amp; Section labels</p>
+        <p class="t-mono" style="color: var(--mf-blue); display: flex; align-items: center; gap: 8px;">
+          <span style="width:8px; height:8px; border-radius:50%; background: var(--mf-blue); box-shadow: 0 0 0 4px rgba(31,139,255,.18);"></span>
+          01 · Principios
+        </p>
+        <p class="t-mono mt-3" style="color: var(--mf-graphite-3);">— Material auxiliar para presentaciones</p>
+      </div>
+    </div>
+
+    <!-- Stat Cards -->
+    <p class="palette-label">Tarjetas de stat — fondo oscuro</p>
+    <div class="card-grid">
+      <div class="stat-card">
+        <div class="num">500+</div>
+        <div class="lbl">Empresas asesoradas en Latam</div>
+      </div>
+      <div class="stat-card">
+        <div class="num">50+</div>
+        <div class="lbl">Charlas y keynotes en 2025</div>
+      </div>
+      <div class="stat-card">
+        <div class="num">1M+</div>
+        <div class="lbl">Personas alcanzadas en redes</div>
+      </div>
+    </div>
+
+    <!-- Pillar Cards -->
+    <p class="palette-label mt-7">Tarjetas de pilar — feature cards</p>
+    <div class="card-grid">
+      <div class="pillar-card">
+        <span class="ico-frame">
+          <svg class="icon-lg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12l4-8 5 6 5-4 4 6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </span>
+        <h4>Estrategia IA</h4>
+        <p>Diagnóstico, hoja de ruta y casos de uso priorizados para tu industria.</p>
+      </div>
+      <div class="pillar-card">
+        <span class="ico-frame">
+          <svg class="icon-lg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="3"/><path d="M9 8h6M9 12h6M9 16h4" stroke-linecap="round"/></svg>
+        </span>
+        <h4>Transformación digital</h4>
+        <p>Procesos, equipos y stack tecnológico alineados al objetivo de negocio.</p>
+      </div>
+      <div class="pillar-card">
+        <span class="ico-frame">
+          <svg class="icon-lg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2L4 6v6c0 5 3.5 9 8 10 4.5-1 8-5 8-10V6l-8-4z" stroke-linejoin="round"/><path d="M9 12l2 2 4-4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </span>
+        <h4>Riesgo &amp; Compliance</h4>
+        <p>Auditoría de exposición, gobernanza y controles de adopción responsable.</p>
+      </div>
+    </div>
+
+    <!-- Testimonials -->
+    <p class="palette-label mt-7">Tarjetas de testimonio</p>
+    <div class="card-grid">
+      <div class="testimonial-card">
+        <div class="stars">
+          <svg class="icon" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l3 6 7 1-5 5 1 7-6-3-6 3 1-7-5-5 7-1z"/></svg>
+          <svg class="icon" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l3 6 7 1-5 5 1 7-6-3-6 3 1-7-5-5 7-1z"/></svg>
+          <svg class="icon" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l3 6 7 1-5 5 1 7-6-3-6 3 1-7-5-5 7-1z"/></svg>
+          <svg class="icon" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l3 6 7 1-5 5 1 7-6-3-6 3 1-7-5-5 7-1z"/></svg>
+          <svg class="icon" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l3 6 7 1-5 5 1 7-6-3-6 3 1-7-5-5 7-1z"/></svg>
+        </div>
+        <p class="quote">"Mateo nos hizo dejar de hablar de IA y empezar a usarla. Pasamos de pilotos eternos a tres procesos productivos en seis semanas."</p>
+        <div class="person">
+          <span class="avatar">CL</span>
+          <div>
+            <div class="name">Carolina López</div>
+            <div class="role">COO · LatamTech</div>
+          </div>
+        </div>
+      </div>
+      <div class="testimonial-card">
+        <div class="stars">
+          <svg class="icon" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l3 6 7 1-5 5 1 7-6-3-6 3 1-7-5-5 7-1z"/></svg>
+          <svg class="icon" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l3 6 7 1-5 5 1 7-6-3-6 3 1-7-5-5 7-1z"/></svg>
+          <svg class="icon" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l3 6 7 1-5 5 1 7-6-3-6 3 1-7-5-5 7-1z"/></svg>
+          <svg class="icon" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l3 6 7 1-5 5 1 7-6-3-6 3 1-7-5-5 7-1z"/></svg>
+          <svg class="icon" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l3 6 7 1-5 5 1 7-6-3-6 3 1-7-5-5 7-1z"/></svg>
+        </div>
+        <p class="quote">"Claridad quirúrgica. Nos mostró exactamente qué dejar de hacer, qué automatizar y qué medir. Cero humo."</p>
+        <div class="person">
+          <span class="avatar">RM</span>
+          <div>
+            <div class="name">Ramiro Méndez</div>
+            <div class="role">CFO · Grupo Plata</div>
+          </div>
+        </div>
+      </div>
+      <div class="testimonial-card">
+        <div class="stars">
+          <svg class="icon" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l3 6 7 1-5 5 1 7-6-3-6 3 1-7-5-5 7-1z"/></svg>
+          <svg class="icon" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l3 6 7 1-5 5 1 7-6-3-6 3 1-7-5-5 7-1z"/></svg>
+          <svg class="icon" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l3 6 7 1-5 5 1 7-6-3-6 3 1-7-5-5 7-1z"/></svg>
+          <svg class="icon" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l3 6 7 1-5 5 1 7-6-3-6 3 1-7-5-5 7-1z"/></svg>
+          <svg class="icon" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l3 6 7 1-5 5 1 7-6-3-6 3 1-7-5-5 7-1z"/></svg>
+        </div>
+        <p class="quote">"La auditoría de riesgos de IA nos sacó del modo reactivo. Hoy tenemos un comité, una política y métricas — todo gracias al framework."</p>
+        <div class="person">
+          <span class="avatar">SA</span>
+          <div>
+            <div class="name">Sofía Arroyo</div>
+            <div class="role">Head of Data · Banco Norte</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============== 07 INSTAGRAM TEMPLATES ============== -->
+  <section class="section">
+    <header class="section-head">
+      <span class="section-num">07 / Plantillas Instagram</span>
+      <h2 class="section-title">El carrusel como formato editorial.</h2>
+      <p class="section-lede">Tres anatomías obligadas en cada serie: portada (oscura, con tesis), cuerpo (claro, con grilla y argumento) y CTA final. Formato 4:5 (1080×1350).</p>
+    </header>
+
+    <div class="templates-row">
+      <div>
+        <div class="ig-frame">
+          <div class="ig-cover">
+            <div class="ig-inner">
+              <div class="number">01 / 06 · Riesgos de IA</div>
+              <h3 class="cover-h">¿Tu equipo<br/>realmente <em>controla</em><br/>la IA?</h3>
+              <p class="cover-sub">Cinco señales de que tu empresa cree que la usa, pero no la audita.</p>
+              <span class="swipe">Deslizá <span class="arrow">→</span></span>
+            </div>
+          </div>
+        </div>
+        <p class="ig-caption">A · Portada · Dark + título grande</p>
+      </div>
+
+      <div>
+        <div class="ig-frame">
+          <div class="ig-light">
+            <div class="ig-inner">
+              <div class="ig-handle-row">
+                <span class="handle"><span class="av"></span>@MATEOFOLADOR</span>
+                <span class="ig-logo-stack">Mateo<br/>Folador</span>
+              </div>
+              <h3 class="ig-h">Falsa sensación<br/>de control</h3>
+              <div class="ig-quotes">
+                <p>"Mi equipo ya usa IA".</p>
+                <p>"Hicimos una capacitación".</p>
+                <p>"Tenemos T&amp;C".</p>
+              </div>
+              <div class="ig-callout">
+                <div class="head">Pero no controlan:</div>
+                <ul>
+                  <li>Qué datos se usan.</li>
+                  <li>Quién tiene acceso.</li>
+                  <li>Cómo se audita.</li>
+                </ul>
+              </div>
+              <span class="ig-arrow">→</span>
+            </div>
+          </div>
+        </div>
+        <p class="ig-caption">B · Cuerpo · Light + grid + callout</p>
+      </div>
+
+      <div>
+        <div class="ig-frame">
+          <div class="ig-dark">
+            <div class="ig-inner">
+              <span class="ig-logo-stack">Mateo<br/>Folador</span>
+              <h3 class="ig-h">¿No sabés<br/><span class="accent">por dónde<br/>empezar?</span></h3>
+              <div class="copy-block">Tenemos una <strong>herramienta para auditar tus riesgos</strong> en menos de cinco minutos.</div>
+              <div class="cta-block">Comenta <em>checklist</em> y te la envío.</div>
+              <div class="handle-bottom">@MATEOFOLADOR</div>
+            </div>
+          </div>
+        </div>
+        <p class="ig-caption">C · CTA · Dark + acento azul</p>
+      </div>
+    </div>
+
+    <!-- Square posts -->
+    <p class="palette-label mt-7">Posts cuadrados (1080×1080)</p>
+    <div class="post-grid">
+      <div>
+        <div class="ig-square">
+          <div class="ig-quote-post">
+            <div class="ig-inner">
+              <span class="handle" style="margin-bottom: 24px;"><span class="av"></span>@MATEOFOLADOR</span>
+              <p class="big-quote">El que no audita<br/>su IA, <em>la sufre</em>.</p>
+              <div class="footer">
+                <span class="t-small" style="color: var(--mf-graphite-3);">Frase de la semana</span>
+                <span class="signature">Mateo<br/>Folador</span>
+              </div>
+            </div>
+          </div>
+        </div>
+        <p class="ig-caption">Post de cita — light</p>
+      </div>
+      <div>
+        <div class="ig-square">
+          <div class="ig-stat-post">
+            <div class="ig-inner">
+              <span class="t-mono" style="color: var(--mf-blue);">— Dato del mes</span>
+              <p class="stat-num">73%</p>
+              <p class="stat-lbl">de las empresas que dicen "usar IA"<br/>no tienen políticas formales.</p>
+            </div>
+          </div>
+        </div>
+        <p class="ig-caption">Post de stat — dark</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============== 08 WEB ============== -->
+  <section class="section">
+    <header class="section-head">
+      <span class="section-num">08 / Plantillas Web</span>
+      <h2 class="section-title">El sitio: dark first.</h2>
+      <p class="section-lede">La web vive en territorio oscuro. Bloques claros aparecen para destacar datos o cambiar el ritmo de lectura.</p>
+    </header>
+
+    <div class="web-frame">
+      <div class="browser-bar">
+        <div class="dots"><span></span><span></span><span></span></div>
+        <div class="url">mateofolador.com</div>
+      </div>
+      <nav class="web-nav">
+        <div class="left">
+          <span class="nav-logo">Mateo<br/>Folador</span>
+          <ul>
+            <li class="active">Inicio</li>
+            <li>Sobre mí</li>
+            <li>Servicios</li>
+            <li>Casos</li>
+          </ul>
+        </div>
+        <button class="btn btn-primary btn-sm">Auditá tu IA</button>
+      </nav>
+
+      <div class="web-hero">
+        <h1>Redefiní lo <em>posible</em><br/>para tu empresa con IA</h1>
+        <p>Trabajo con líderes que necesitan pasar de la conversación a la ejecución. Diagnóstico, estrategia y adopción responsable.</p>
+        <div class="btn-row">
+          <button class="btn btn-primary">Agendar llamada <svg class="icon arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M5 12h14M13 6l6 6-6 6" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+          <button class="btn btn-ghost-light">Ver casos</button>
+        </div>
+      </div>
+
+      <div class="web-stats">
+        <h2>Un experto que<br/><em>no solo conoce</em> IA<br/>— la implementa.</h2>
+        <div class="stats-row">
+          <div class="stat-tile">
+            <div class="n">500+</div>
+            <div class="l">Empresas asesoradas</div>
+          </div>
+          <div class="stat-tile">
+            <div class="n">50+</div>
+            <div class="l">Keynotes en 2025</div>
+          </div>
+          <div class="stat-tile">
+            <div class="n">1M+</div>
+            <div class="l">Alcanzados en redes</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============== 09 VOZ ============== -->
+  <section class="section">
+    <header class="section-head">
+      <span class="section-num">09 / Voz &amp; tono</span>
+      <h2 class="section-title">Directo, sin humo, español colombiano neutro.</h2>
+      <p class="section-lede">Mateo habla como entrenador de líderes: claro, cercano, va al grano, sin jerga sin traducir. Castellano colombiano tirando a neutro — entendible en toda Latinoamérica.</p>
+    </header>
+
+    <div class="grid-2">
+      <div class="stage">
+        <p class="stage-label" style="color: var(--mf-success);"><span class="dot" style="background: var(--mf-success);"></span>Sí escribimos así</p>
+        <ul style="margin: 0; padding: 0; list-style: none; display: grid; gap: var(--s-3);">
+          <li class="t-body">"¿Tu equipo realmente controla la IA?"</li>
+          <li class="t-body">"Comenta <em>checklist</em> y te la envío."</li>
+          <li class="t-body">"Pasa de pilotos eternos a tres procesos productivos."</li>
+          <li class="t-body">"El que no audita su IA, la sufre."</li>
+          <li class="t-body">"Te muestro cómo hacerlo, paso a paso."</li>
+        </ul>
+      </div>
+      <div class="stage">
+        <p class="stage-label" style="color: var(--mf-warn);"><span class="dot" style="background: var(--mf-warn);"></span>No escribimos así</p>
+        <ul style="margin: 0; padding: 0; list-style: none; display: grid; gap: var(--s-3);">
+          <li class="t-body" style="color: var(--mf-graphite-3); text-decoration: line-through;">"Maximizamos sinergias mediante IA generativa."</li>
+          <li class="t-body" style="color: var(--mf-graphite-3); text-decoration: line-through;">"Te invitamos a descargar nuestro material."</li>
+          <li class="t-body" style="color: var(--mf-graphite-3); text-decoration: line-through;">"Soluciones disruptivas end-to-end."</li>
+          <li class="t-body" style="color: var(--mf-graphite-3); text-decoration: line-through;">"En el mundo VUCA actual…"</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <footer class="footer">
+    <span>Mateo Folador · Design System v1.0 · Mayo 2026</span>
+    <span>Hecho con cuidado en Bogotá</span>
+  </footer>
+
+</main>
+</body>
+</html>

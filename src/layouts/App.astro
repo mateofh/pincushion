@@ -1,0 +1,230 @@
+---
+// Layout global: barra superior (Ink), navegación, flash, región aria-live y contenido.
+// Lo mantiene la sesión principal; los streams de UI añaden componentes, no editan este archivo.
+import '../styles/global.css';
+import { takeFlash } from '../server/http.ts';
+
+interface Props {
+  title: string;
+  /** Ruta activa para aria-current en la navegación. */
+  active?: 'biblioteca' | 'buscar' | 'guardar' | 'bookmarklet' | 'ajustes' | 'papelera' | 'colecciones' | 'etiquetas';
+  /** Oculta la barra de navegación (pantalla de entrar, popup del bookmarklet). */
+  bare?: boolean;
+  /** Valor inicial del buscador global. */
+  query?: string;
+}
+
+const { title, active, bare = false, query = '' } = Astro.props;
+const { user, csrf, app } = Astro.locals;
+const flash = takeFlash(Astro.cookies, app.config);
+const nav = [
+  { key: 'biblioteca', href: '/', label: 'Biblioteca' },
+  { key: 'bookmarklet', href: '/bookmarklet', label: 'Bookmarklet' },
+  { key: 'ajustes', href: '/ajustes', label: 'Ajustes' },
+] as const;
+---
+
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="color-scheme" content="light" />
+    <meta name="htmx-config" content='{"allowEval":false,"includeIndicatorStyles":false,"historyCacheSize":0,"selfRequestsOnly":true}' />
+    <title>{title} · Pincushion</title>
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+    {csrf && <meta name="csrf-token" content={csrf} />}
+  </head>
+  <body>
+    <a class="skip-link" href="#contenido">Saltar al contenido</a>
+    {
+      !bare && user && (
+        <header class="topbar">
+          <a class="wordmark" href="/" aria-label="Pincushion, ir a la Biblioteca">
+            <span>Pin</span>
+            <span>cushion</span>
+          </a>
+          <form class="global-search" role="search" action="/buscar" method="get">
+            <label class="visually-hidden" for="q-global">Buscar en tus enlaces</label>
+            <input id="q-global" name="q" type="search" value={query} placeholder="Buscar en tus enlaces…" autocomplete="off" maxlength="200" />
+          </form>
+          <nav aria-label="Principal" class="mainnav">
+            <ul>
+              {nav.map((n) => (
+                <li>
+                  <a href={n.href} aria-current={active === n.key ? 'page' : undefined}>{n.label}</a>
+                </li>
+              ))}
+              <li>
+                <form method="post" action="/salir">
+                  <input type="hidden" name="_csrf" value={csrf} />
+                  <button type="submit" class="linklike">Salir</button>
+                </form>
+              </li>
+            </ul>
+          </nav>
+          <a class="btn btn-primary save-cta" href="/guardar" aria-current={active === 'guardar' ? 'page' : undefined}>
+            Guardar enlace
+          </a>
+        </header>
+      )
+    }
+    <div class="flash-region" role="status" aria-live="polite" id="flash">
+      {
+        flash && (
+          <div class:list={['flash', `flash-${flash.kind}`]} tabindex="-1" data-flash>
+            <p>{flash.message}</p>
+            {flash.action?.href && <a href={flash.action.href}>{flash.action.label}</a>}
+            {flash.action?.post && (
+              <form method="post" action={flash.action.post}>
+                <input type="hidden" name="_csrf" value={csrf} />
+                {Object.entries(flash.action.fields ?? {}).map(([k, v]) => <input type="hidden" name={k} value={v} />)}
+                <button type="submit" class="linklike">{flash.action.label}</button>
+              </form>
+            )}
+          </div>
+        )
+      }
+    </div>
+    <div class="visually-hidden" aria-live="polite" id="announcer"></div>
+    <main id="contenido" tabindex="-1">
+      <slot />
+    </main>
+    <script src="../scripts/app.ts"></script>
+  </body>
+</html>
+
+<style>
+  .topbar {
+    display: flex;
+    align-items: center;
+    gap: var(--s-4);
+    padding: var(--s-3) var(--s-5);
+    background: var(--chrome-bg);
+    color: var(--chrome-text);
+    border-bottom: 1px solid var(--chrome-border);
+    position: sticky;
+    top: 0;
+    z-index: 10;
+  }
+  .wordmark {
+    font: 800 15px/0.88 var(--mf-display);
+    letter-spacing: -0.02em;
+    text-transform: uppercase;
+    color: #fff;
+    text-decoration: none;
+    display: grid;
+    min-height: var(--tap);
+    align-content: center;
+  }
+  .global-search {
+    flex: 1;
+    max-width: 520px;
+  }
+  .global-search input {
+    width: 100%;
+    min-height: 40px;
+    border-radius: var(--r-pill);
+    border: 1px solid var(--mf-ink-700);
+    background: var(--mf-ink-800);
+    color: #fff;
+    padding: 0 var(--s-4);
+    font: 400 15px var(--mf-text);
+  }
+  .global-search input::placeholder {
+    color: var(--mf-ink-300);
+  }
+  .mainnav ul {
+    display: flex;
+    gap: var(--s-1);
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    align-items: center;
+  }
+  .mainnav a,
+  .linklike {
+    display: inline-flex;
+    align-items: center;
+    min-height: var(--tap);
+    padding: 0 var(--s-3);
+    color: var(--chrome-text);
+    text-decoration: none;
+    font: 500 14px var(--mf-text);
+    background: none;
+    border: 0;
+    cursor: pointer;
+    border-radius: var(--r-pill);
+  }
+  .mainnav a[aria-current='page'] {
+    color: var(--mf-blue-bright);
+    text-decoration: underline;
+    text-underline-offset: 6px;
+  }
+  .flash-region {
+    max-width: var(--content-max);
+    margin: 0 auto;
+    padding: 0 var(--s-5);
+  }
+  .flash {
+    display: flex;
+    gap: var(--s-4);
+    align-items: center;
+    margin-top: var(--s-4);
+    padding: var(--s-3) var(--s-4);
+    border-radius: var(--r-md);
+    border: 1px solid var(--border);
+    background: var(--surface);
+    box-shadow: var(--shadow-soft);
+  }
+  .flash p {
+    margin: 0;
+    flex: 1;
+  }
+  .flash-success {
+    border-left: 4px solid var(--mf-success-text);
+  }
+  .flash-error {
+    border-left: 4px solid var(--mf-warn-text);
+  }
+  .flash-info {
+    border-left: 4px solid var(--accent);
+  }
+  .flash .linklike {
+    color: var(--accent);
+    font-weight: 600;
+  }
+  main {
+    max-width: var(--content-max);
+    margin: 0 auto;
+    padding: var(--s-5);
+  }
+  main:focus {
+    outline: none;
+  }
+  @media (max-width: 720px) {
+    .topbar {
+      flex-wrap: wrap;
+      padding: var(--s-2) var(--s-4);
+      gap: var(--s-2);
+    }
+    .global-search {
+      order: 3;
+      flex-basis: 100%;
+      max-width: none;
+    }
+    .mainnav {
+      margin-left: auto;
+    }
+    .save-cta {
+      position: fixed;
+      right: var(--s-4);
+      bottom: calc(var(--s-4) + env(safe-area-inset-bottom));
+      z-index: 20;
+      min-height: 52px;
+    }
+    main {
+      padding: var(--s-4) var(--s-4) 96px;
+    }
+  }
+</style>

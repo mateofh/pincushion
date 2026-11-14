@@ -1,0 +1,56 @@
+---
+// Guardar. ESQUELETO (Ola 0): URL + título + etiquetas. El stream de Guardar añade autofill, duplicados y colección.
+import App from '../layouts/App.astro';
+import { saveBookmark } from '../server/services/bookmarks.ts';
+import { InvalidUrlError } from '../domain/url.ts';
+import { formString, seeOther, setFlash } from '../server/http.ts';
+
+const { app, user, csrf } = Astro.locals;
+let error = '';
+let values = { url: Astro.url.searchParams.get('url') ?? '', title: '', tags: '' };
+
+if (Astro.request.method === 'POST') {
+  const form = await Astro.request.formData();
+  values = { url: formString(form, 'url', 2048), title: formString(form, 'title', 300), tags: formString(form, 'tags', 1000) };
+  try {
+    const r = saveBookmark(app, user!.id, { url: values.url, title: values.title, tags: values.tags.split(',') });
+    setFlash(Astro.cookies, app.config, { kind: 'success', message: r.created ? 'Enlace guardado.' : 'Ya lo tenías guardado: se actualizó.' });
+    return seeOther('/');
+  } catch (err) {
+    if (!(err instanceof InvalidUrlError)) throw err;
+    error = err.message;
+    Astro.response.status = 422;
+  }
+}
+---
+
+<App title="Guardar enlace" active="guardar">
+  <h1>Guardar enlace</h1>
+  <form method="post" class="save-form" novalidate>
+    <input type="hidden" name="_csrf" value={csrf} />
+    <div class="field">
+      <label for="url">URL</label>
+      <input id="url" name="url" type="url" inputmode="url" required value={values.url} aria-invalid={error ? 'true' : undefined} aria-describedby={error ? 'url-error' : undefined} />
+      {error && <p class="error" id="url-error">{error}</p>}
+    </div>
+    <div class="field">
+      <label for="title">Título</label>
+      <input id="title" name="title" type="text" maxlength="300" value={values.title} />
+    </div>
+    <div class="field">
+      <label for="tags">Etiquetas</label>
+      <input id="tags" name="tags" type="text" value={values.tags} aria-describedby="tags-hint" />
+      <p class="hint" id="tags-hint">Sepáralas con comas.</p>
+    </div>
+    <button class="btn btn-primary" type="submit">Guardar</button>
+  </form>
+</App>
+
+<style>
+  .save-form {
+    display: grid;
+    gap: var(--s-4);
+    max-width: 640px;
+    margin-top: var(--s-5);
+  }
+</style>

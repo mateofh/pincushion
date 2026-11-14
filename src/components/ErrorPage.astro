@@ -1,0 +1,50 @@
+---
+// Página de error reutilizable: mensaje humano, código de referencia y siguiente paso.
+import App from '../layouts/App.astro';
+
+interface Props {
+  status: number;
+  title: string;
+  message: string;
+  actionHref?: string;
+  actionLabel?: string;
+}
+const { status, title, message, actionHref = '/', actionLabel = 'Volver a la Biblioteca' } = Astro.props;
+Astro.response.status = status;
+const ref = Astro.locals.requestId;
+---
+
+<App title={title}>
+  <section class="error-page" aria-labelledby="err-title">
+    <p class="code">Error {status}</p>
+    <h1 id="err-title">{title}</h1>
+    <p>{message}</p>
+    <p class="ref">Código de referencia: <code>{ref}</code></p>
+    <a class="btn btn-primary" href={actionHref}>{actionLabel}</a>
+  </section>
+</App>
+
+<style>
+  .error-page {
+    max-width: 560px;
+    margin: var(--s-7) auto;
+    display: grid;
+    gap: var(--s-4);
+  }
+  .error-page p {
+    margin: 0;
+  }
+  .code {
+    font: 500 12px var(--mf-mono);
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--accent);
+  }
+  .ref {
+    font-size: 13px;
+    color: var(--text-muted);
+  }
+  .error-page .btn {
+    justify-self: start;
+  }
+</style>

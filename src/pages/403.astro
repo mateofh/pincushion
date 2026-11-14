@@ -1,0 +1,11 @@
+---
+import ErrorPage from '../components/ErrorPage.astro';
+---
+
+<ErrorPage
+  status={403}
+  title="Este formulario caducó"
+  message="Por seguridad no pudimos aplicar el cambio. Recarga la página e inténtalo otra vez; tus datos no se modificaron."
+  actionHref="/"
+  actionLabel="Ir a la Biblioteca"
+/>

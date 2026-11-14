@@ -1,0 +1,102 @@
+---
+// Entrar. Pública. POST con email y contraseña → crea sesión y vuelve a `next`.
+import App from '../layouts/App.astro';
+import { authenticate, createSession, SESSION_ABSOLUTE_MS } from '../server/auth/sessions.ts';
+import { cookieName, formString, safeReturnPath, seeOther } from '../server/http.ts';
+
+const { app, user } = Astro.locals;
+const next = safeReturnPath(Astro.url.searchParams.get('next'));
+const expired = Astro.url.searchParams.get('expirada') === '1';
+let error = '';
+let email = '';
+
+if (user && Astro.request.method === 'GET') return Astro.redirect(next, 303);
+
+if (Astro.request.method === 'POST') {
+  const form = await Astro.request.formData();
+  email = formString(form, 'email', 254).trim();
+  const password = formString(form, 'password', 200);
+  const target = safeReturnPath(formString(form, 'next', 1000));
+  if (!email || !password) {
+    error = 'Escribe tu email y tu contraseña.';
+  } else {
+    const found = await authenticate(app, email, password);
+    if (found) {
+      const { token } = createSession(app, found.id);
+      Astro.cookies.set(cookieName(app.config, 'pc_session'), token, {
+        path: '/', httpOnly: true, sameSite: 'lax', secure: app.config.secureCookies, maxAge: SESSION_ABSOLUTE_MS / 1000,
+      });
+      return seeOther(target);
+    }
+    error = 'El email o la contraseña no coinciden.';
+  }
+  Astro.response.status = 422;
+}
+---
+
+<App title="Entrar" bare>
+  <section class="auth">
+    <div class="auth-card">
+      <p class="wordmark-lg" aria-hidden="true"><span>Pin</span><span>cushion</span></p>
+      <h1>Entrar</h1>
+      <p class="lede">Tus enlaces guardados, en un solo lugar.</p>
+      {expired && <p class="notice" role="status">Tu sesión expiró. Inicia sesión de nuevo; no se perdió nada.</p>}
+      <form method="post" novalidate>
+        <input type="hidden" name="next" value={next} />
+        <div class="field">
+          <label for="email">Email</label>
+          <input id="email" name="email" type="email" autocomplete="username" required value={email} aria-invalid={error ? 'true' : undefined} aria-describedby={error ? 'login-error' : undefined} />
+        </div>
+        <div class="field">
+          <label for="password">Contraseña</label>
+          <input id="password" name="password" type="password" autocomplete="current-password" required aria-invalid={error ? 'true' : undefined} aria-describedby={error ? 'login-error' : undefined} />
+        </div>
+        {error && <p class="field error" id="login-error" role="alert">{error}</p>}
+        <button class="btn btn-primary" type="submit">Entrar</button>
+      </form>
+    </div>
+  </section>
+</App>
+
+<style>
+  .auth {
+    min-height: 80vh;
+    display: grid;
+    place-items: center;
+    background-image: linear-gradient(var(--mf-paper-grid) 1px, transparent 1px), linear-gradient(90deg, var(--mf-paper-grid) 1px, transparent 1px);
+    background-size: 64px 64px;
+    border-radius: var(--r-lg);
+  }
+  .auth-card {
+    width: min(420px, 100%);
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--r-lg);
+    box-shadow: var(--shadow-soft);
+    padding: var(--s-6);
+    display: grid;
+    gap: var(--s-4);
+  }
+  .wordmark-lg {
+    margin: 0;
+    display: grid;
+    font: 800 28px/0.88 var(--mf-display);
+    letter-spacing: -0.02em;
+    text-transform: uppercase;
+  }
+  .lede {
+    margin: 0;
+    color: var(--text-muted);
+  }
+  .notice {
+    margin: 0;
+    padding: var(--s-3) var(--s-4);
+    border-radius: var(--r-md);
+    background: #eef5ff;
+    border-left: 4px solid var(--accent);
+  }
+  form {
+    display: grid;
+    gap: var(--s-4);
+  }
+</style>

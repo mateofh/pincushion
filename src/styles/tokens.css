@@ -1,0 +1,99 @@
+/* Tokens de Pincushion, derivados del Sistema de Diseño de Mateo Folador (docs/marca/).
+   Los valores de marca se conservan; los marcados "a11y" son variantes para cumplir WCAG AA
+   en texto normal (ver docs/MARCA.md). */
+
+@import '@fontsource-variable/inter/index.css';
+@import '@fontsource-variable/inter-tight/index.css';
+@import '@fontsource/jetbrains-mono/400.css';
+@import '@fontsource/jetbrains-mono/500.css';
+
+:root {
+  /* Marca */
+  --mf-blue: #1f8bff;          /* acento: foco, detalles, cifras grandes */
+  --mf-blue-bright: #4da8ff;   /* hover sobre Ink */
+  --mf-blue-deep: #0a4fb8;     /* press */
+  --mf-blue-soft: #bedeff;     /* resaltado claro */
+  --mf-blue-600: #0b6bdb;      /* a11y: fondo de botón primario y enlaces sobre Paper (5,1:1 con blanco) */
+
+  /* Ink (superficies oscuras) */
+  --mf-ink-950: #0a0f1a;
+  --mf-ink-900: #0f1623;
+  --mf-ink-800: #182030;
+  --mf-ink-700: #232c3d;
+  --mf-ink-500: #4a566b;
+  --mf-ink-300: #8c97ad;
+  --mf-ink-100: #d9dee8;
+  --mf-ink-000: #ffffff;
+
+  /* Paper (superficies claras) */
+  --mf-paper: #f4f7fb;
+  --mf-paper-warm: #ffffff;
+  --mf-paper-grid: #e3eaf3;
+  --mf-graphite: #11151c;
+  --mf-graphite-2: #2b3340;
+  --mf-graphite-3: #5a6473;
+
+  /* Acentos de estado (fondos suaves) y variantes de texto a11y */
+  --mf-warn: #ff6b57;
+  --mf-warn-text: #b8321f;     /* a11y */
+  --mf-success: #2ecc8b;
+  --mf-success-text: #0f7a50;  /* a11y */
+  --mf-gold: #f5c24a;          /* favorito (siempre con icono + texto) */
+  --mf-gold-text: #8a6100;     /* a11y */
+
+  /* Tipografía */
+  --mf-display: 'Inter Tight Variable', 'Inter Variable', system-ui, sans-serif;
+  --mf-text: 'Inter Variable', system-ui, sans-serif;
+  --mf-mono: 'JetBrains Mono', ui-monospace, monospace;
+
+  /* Radios */
+  --r-sm: 6px;
+  --r-md: 12px;
+  --r-lg: 18px;
+  --r-xl: 28px;
+  --r-pill: 999px;
+
+  /* Espaciado (8 pt) */
+  --s-1: 4px;
+  --s-2: 8px;
+  --s-3: 12px;
+  --s-4: 16px;
+  --s-5: 24px;
+  --s-6: 32px;
+  --s-7: 48px;
+  --s-8: 64px;
+
+  /* Sombras */
+  --shadow-soft: 0 1px 2px rgba(10, 15, 26, 0.06), 0 8px 24px rgba(10, 15, 26, 0.06);
+  --shadow-deep: 0 30px 60px -20px rgba(10, 15, 26, 0.45), 0 12px 24px -10px rgba(10, 15, 26, 0.3);
+  --glow-blue: 0 0 0 1px rgba(31, 139, 255, 0.35), 0 12px 40px -8px rgba(31, 139, 255, 0.55);
+
+  /* Roles semánticos de la app (usar estos en componentes) */
+  --bg: var(--mf-paper);
+  --surface: var(--mf-paper-warm);
+  --border: var(--mf-paper-grid);
+  --text: var(--mf-graphite);
+  --text-2: var(--mf-graphite-2);
+  --text-muted: var(--mf-graphite-3);
+  --accent: var(--mf-blue-600);
+  --accent-hover: var(--mf-blue-deep);
+  --focus-ring: 0 0 0 3px var(--mf-paper-warm), 0 0 0 5px var(--mf-blue);
+  --chrome-bg: var(--mf-ink-950);
+  --chrome-text: var(--mf-ink-100);
+  --chrome-muted: var(--mf-ink-300);
+  --chrome-border: var(--mf-ink-800);
+
+  --tap: 44px; /* tamaño mínimo de objetivo táctil */
+  --content-max: 1200px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}

@@ -1,0 +1,12 @@
+node_modules
+dist
+dist-*
+.astro
+data
+.env
+test-results
+playwright-report
+.worktrees
+*.db
+*.db-wal
+*.db-shm

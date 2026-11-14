@@ -1,0 +1,44 @@
+---
+// Buscar. ESQUELETO (Ola 0): consulta y resultados resaltados. El stream de Buscar añade filtros, estados y HTMX.
+import App from '../layouts/App.astro';
+import { searchBookmarks } from '../server/services/bookmarks.ts';
+import { highlightToHtml } from '../domain/highlight.ts';
+
+const { app, user } = Astro.locals;
+const q = (Astro.url.searchParams.get('q') ?? '').slice(0, 200);
+const results = q.trim() ? searchBookmarks(app, user!.id, q) : [];
+---
+
+<App title={q ? `Buscar: ${q}` : 'Buscar'} active="buscar" query={q}>
+  <h1>Buscar</h1>
+  {q && <p>{results.length} resultado{results.length === 1 ? '' : 's'} para «{q}»</p>}
+  <ol class="results" aria-label="Resultados">
+    {
+      results.map((r) => (
+        <li data-bookmark-id={r.id}>
+          <a href={r.url} rel="noopener noreferrer" target="_blank" set:html={highlightToHtml(r.title_hl)} />
+          <p class="snippet" set:html={highlightToHtml(r.excerpt_hl)} />
+        </li>
+      ))
+    }
+  </ol>
+</App>
+
+<style>
+  .results {
+    list-style: none;
+    padding: 0;
+    display: grid;
+    gap: var(--s-3);
+  }
+  .results li {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--r-md);
+    padding: var(--s-4);
+  }
+  .snippet {
+    margin: var(--s-2) 0 0;
+    color: var(--text-2);
+  }
+</style>
