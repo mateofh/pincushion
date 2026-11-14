@@ -5,6 +5,7 @@
 // Pasos: valida el origen → lo materializa en un temporal junto a la DB (VACUUM INTO) → guarda la DB actual
 // en backups/pre-restore-<ISO>.db → checkpoint y borra -wal/-shm viejos → rename atómico del temporal.
 import { parseArgs } from 'node:util';
+import { loadDotEnv } from '../src/server/config.ts';
 import { existsSync, mkdirSync, renameSync, statSync, unlinkSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import { listMigrations, openDb } from '../src/server/db/sqlite.ts';
@@ -38,6 +39,7 @@ if (values.help) {
 }
 if (!values.from) fail(`Falta --from.\n${USAGE}`);
 
+loadDotEnv();
 const dbPath = resolve(process.env.DATABASE_PATH || './data/pincushion.db');
 const from = resolve(values.from);
 if (!existsSync(from)) fail(`No existe el archivo origen: ${from}`);

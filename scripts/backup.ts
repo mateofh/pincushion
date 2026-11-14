@@ -3,6 +3,7 @@
 //   --out <ruta>  archivo destino (por defecto <dir de la DB>/backups/pincushion-<ISO>.db)
 //   --keep <n>    copias pincushion-*.db que se conservan en el directorio destino (7; 0 = no borrar)
 import { parseArgs } from 'node:util';
+import { loadDotEnv } from '../src/server/config.ts';
 import { existsSync, mkdirSync, unlinkSync } from 'node:fs';
 import { basename, dirname, join, resolve } from 'node:path';
 import { openDb } from '../src/server/db/sqlite.ts';
@@ -38,6 +39,7 @@ const keep = Number(values.keep);
 if (!Number.isInteger(keep) || keep < 0) fail(`--keep debe ser un entero >= 0.\n${USAGE}`);
 
 // Solo hace falta la ruta de la DB: no se exige APP_SECRET para sacar una copia.
+loadDotEnv();
 const dbPath = resolve(process.env.DATABASE_PATH || './data/pincushion.db');
 if (!existsSync(dbPath)) fail(`No existe la base de datos: ${dbPath}`);
 
