@@ -1,0 +1,154 @@
+---
+// Popup del bookmarklet. GET: shell mínima que lee el fragmento (#v,t,u,ti,de), lo borra y envía un POST
+// same-origin. POST: autenticado solo por token (sin CSRF de sesión); solo guarda, nunca revela datos.
+import App from '../../layouts/App.astro';
+import PopupResult from '../../components/capture/PopupResult.astro';
+import { isTestPage } from '../../components/capture/form.ts';
+import { bookmarkletService } from '../../server/auth/bookmarklet.ts';
+import { bookmarkService } from '../../server/services/bookmarks.ts';
+import { runInline } from '../../server/jobs/worker.ts';
+import { InvalidUrlError, unsavableReason } from '../../domain/url.ts';
+import { clientIp, hit, tooManyMessage } from '../../server/security/rate-limit.ts';
+import { formString, seeOther, setFlash } from '../../server/http.ts';
+
+const { app, user, requestId } = Astro.locals;
+type Outcome =
+  | { kind: 'shell' }
+  | { kind: 'invalid' }
+  | { kind: 'limit'; wait: number }
+  | { kind: 'unsavable'; message: string }
+  | { kind: 'test' }
+  | { kind: 'saved'; created: boolean };
+let outcome: Outcome = { kind: 'shell' };
+
+if (Astro.request.method === 'POST') {
+  const form = await Astro.request.formData();
+  const token = formString(form, 't', 100);
+  const url = formString(form, 'u', 2100);
+  const title = formString(form, 'ti', 400);
+  const description = formString(form, 'de', 1200);
+  const svc = bookmarkletService(app, { requestId });
+  const who = svc.verify(token);
+  if (!who) {
+    const rl = hit(app, 'bookmarklet:invalid', clientIp(Astro), 30, 60_000);
+    if (!rl.allowed) {
+      outcome = { kind: 'limit', wait: rl.retryAfterS };
+      Astro.response.status = 429;
+      Astro.response.headers.set('Retry-After', String(rl.retryAfterS));
+    } else {
+      outcome = { kind: 'invalid' };
+      Astro.response.status = 401;
+    }
+  } else {
+    const rl = hit(app, 'bookmarklet:save', who.tokenId, 60, 60_000);
+    const reason = unsavableReason(url);
+    if (!rl.allowed) {
+      outcome = { kind: 'limit', wait: rl.retryAfterS };
+      Astro.response.status = 429;
+      Astro.response.headers.set('Retry-After', String(rl.retryAfterS));
+    } else if (isTestPage(url, app.config.APP_ORIGIN)) {
+      svc.markUsed(who.tokenId, true);
+      outcome = { kind: 'test' };
+    } else if (reason) {
+      outcome = { kind: 'unsavable', message: reason };
+      Astro.response.status = 422;
+    } else {
+      try {
+        const saved = bookmarkService(app).save(who.userId, { url, title: title || undefined, description: description || undefined }, 'bookmarklet');
+        svc.markUsed(who.tokenId, false);
+        // Metadatos y favicon dentro de 3 s; si no alcanza, sigue en la cola.
+        await runInline(app, saved.bookmark.id, { budgetMs: 3000 }).catch((err) => app.log.error('bookmarklet.inline_failed', { err }));
+        outcome = { kind: 'saved', created: saved.created };
+        // Con la sesión del dueño en este navegador: PRG a la pantalla con edición. El resultado va en el flash.
+        if (user && user.id === who.userId) {
+          setFlash(Astro.cookies, app.config, { kind: 'success', message: saved.created ? 'Guardado ✓' : 'Ya estaba guardado' });
+          return seeOther(`/bookmarklet/guardado/${saved.bookmark.id}`);
+        }
+      } catch (err) {
+        if (!(err instanceof InvalidUrlError)) throw err;
+        outcome = { kind: 'unsavable', message: err.message };
+        Astro.response.status = 422;
+      }
+    }
+  }
+}
+const o = outcome;
+---
+
+<App title={o.kind === 'shell' ? 'Guardando…' : 'Bookmarklet'} bare>
+  {
+    o.kind === 'shell' && (
+      <section class="shell" aria-labelledby="shell-t" data-shell>
+        <span class="spinner" aria-hidden="true"></span>
+        <h1 id="shell-t">Guardando…</h1>
+        <p id="shell-estado" role="status" aria-live="polite">Estamos guardando la página en Pincushion.</p>
+        <noscript>
+          <p class="aviso">
+            El bookmarklet necesita JavaScript para enviar la página. Actívalo, o guarda el enlace pegándolo en <a href="/guardar">Guardar enlace</a>.
+          </p>
+        </noscript>
+      </section>
+    )
+  }
+  {
+    o.kind === 'invalid' && (
+      <PopupResult kind="error" title="Este bookmarklet ya no es válido" message="Instala el nuevo desde Pincushion: el anterior dejó de funcionar." links={[{ href: '/bookmarklet', label: 'Instalar el nuevo' }]} />
+    )
+  }
+  {o.kind === 'limit' && <PopupResult kind="warn" title="Demasiados intentos" message={`${tooManyMessage(o.wait)} y vuelve a pulsar el bookmarklet.`} />}
+  {o.kind === 'unsavable' && <PopupResult kind="warn" title="Esta página no se puede guardar" message={o.message} />}
+  {
+    o.kind === 'test' && (
+      <PopupResult kind="success" title="✓ Prueba recibida" message="Tu bookmarklet funciona. No se guardó ningún enlace." links={[{ href: '/bookmarklet/prueba', label: 'Ver el resultado' }]} />
+    )
+  }
+  {
+    o.kind === 'saved' && (
+      <PopupResult
+        kind="success"
+        title={o.created ? 'Guardado ✓' : 'Ya estaba guardado'}
+        message="Inicia sesión para añadir etiquetas o cambiar el título."
+        links={[{ href: '/entrar?next=%2F', label: 'Iniciar sesión' }]}
+      />
+    )
+  }
+  {o.kind === 'shell' && <script src="../../scripts/bookmarklet-shell.ts"></script>}
+</App>
+
+<style>
+  .shell {
+    max-width: 420px;
+    margin: var(--s-8) auto;
+    padding: var(--s-6);
+    display: grid;
+    gap: var(--s-3);
+    justify-items: center;
+    text-align: center;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--r-lg);
+    box-shadow: var(--shadow-soft);
+  }
+  .shell p {
+    margin: 0;
+    color: var(--text-2);
+  }
+  .spinner {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    border: 4px solid var(--mf-blue-soft);
+    border-top-color: var(--accent);
+    animation: giro 0.9s linear infinite;
+  }
+  @keyframes giro {
+    to {
+      transform: rotate(360deg);
+    }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .spinner {
+      animation: none;
+    }
+  }
+</style>
