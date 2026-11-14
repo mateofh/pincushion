@@ -15,3 +15,12 @@ export class NotFoundError extends Error {
     this.name = 'NotFoundError';
   }
 }
+
+export function isValidationError(e: unknown): e is ValidationError {
+  return e instanceof ValidationError;
+}
+
+/** `{ campo: mensaje }` para pintar el error junto al campo; null si no es un error de validación. */
+export function toFieldErrors(e: unknown): Record<string, string> | null {
+  return e instanceof ValidationError ? { [e.field]: e.message } : null;
+}
