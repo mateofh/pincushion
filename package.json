@@ -30,6 +30,7 @@
     "astro": "^7.4.12",
     "htmlparser2": "^12.0.0",
     "htmx.org": "^2.0.11",
+    "playwright-core": "^1.63.0",
     "sirv": "^3.0.2"
   },
   "devDependencies": {

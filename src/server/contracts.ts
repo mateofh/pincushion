@@ -35,6 +35,38 @@ export interface Bookmark {
   createdAt: number;
   updatedAt: number;
   trashedAt: number | null;
+  /**
+   * Portada del enlace (Ola 4). Opcional mientras el stream de portadas la rellena en los servicios.
+   * status: pending (aún no se intentó), succeeded (hay imagen en `url`), none (no hay imagen: usar portada generada), failed.
+   */
+  cover?: BookmarkCover;
+}
+
+export interface BookmarkCover {
+  status: 'pending' | 'succeeded' | 'none' | 'failed';
+  /** `/portadas/:id?v=<fetched_at>` si status = succeeded; null en otro caso. */
+  url: string | null;
+  width: number | null;
+  height: number | null;
+  source: 'og_image' | 'screenshot' | null;
+}
+
+// ---------- adapters/screenshotter.ts (stream de capturas) ----------
+
+export interface ScreenshotResult {
+  contentType: 'image/jpeg';
+  bytes: Uint8Array;
+  width: number;
+  height: number;
+}
+
+export interface Screenshotter {
+  /**
+   * Captura la página con Chromium y JavaScript DESACTIVADO; toda la red pasa por el fetcher guardado (SSRF).
+   * Devuelve null si la página sale vacía o no se pudo capturar (la UI usa la portada generada). Nunca lanza.
+   */
+  capture(url: string, opts?: { timeoutMs?: number; signal?: AbortSignal }): Promise<ScreenshotResult | null>;
+  close(): Promise<void>;
 }
 
 // ---------- services/bookmarks.ts ----------
