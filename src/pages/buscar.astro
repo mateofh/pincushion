@@ -1,44 +1,164 @@
 ---
-// Buscar. ESQUELETO (Ola 0): consulta y resultados resaltados. El stream de Buscar añade filtros, estados y HTMX.
+// Buscar: un campo + filtros en la URL (GET). Resultados con <mark> del servicio de búsqueda.
+// Con HTMX (src/scripts/search-live.ts) busca en vivo; sin JavaScript funciona con el botón "Buscar".
 import App from '../layouts/App.astro';
-import { searchBookmarks } from '../server/services/bookmarks.ts';
-import { highlightToHtml } from '../domain/highlight.ts';
+import EmptyState from '../components/ui/EmptyState.astro';
+import Notice from '../components/ui/Notice.astro';
+import Icon from '../components/ui/Icon.astro';
+import SearchForm from '../components/search/SearchForm.astro';
+import SearchResult from '../components/search/SearchResult.astro';
+import { searchService } from '../server/services/search.ts';
+import { tagService } from '../server/services/tags.ts';
+import { collectionService } from '../server/services/collections.ts';
+import { MAX_QUERY_LENGTH } from '../domain/search-query.ts';
+import { isValidationError } from '../domain/errors.ts';
+import type { Page, SearchHit } from '../server/contracts.ts';
 
-const { app, user } = Astro.locals;
-const q = (Astro.url.searchParams.get('q') ?? '').slice(0, 200);
-const results = q.trim() ? searchBookmarks(app, user!.id, q) : [];
+const { app, user, csrf } = Astro.locals;
+const params = Astro.url.searchParams;
+const q = params.get('q') ?? '';
+const activeTags = [...new Set(params.getAll('etiqueta').filter((t) => t.length > 0 && t.length <= 100))].slice(0, 20);
+const collectionParam = params.get('coleccion') ?? '';
+const collection: number | 'sin-coleccion' | undefined =
+  collectionParam === 'sin-coleccion' ? 'sin-coleccion' : /^\d{1,12}$/.test(collectionParam) ? Number(collectionParam) : undefined;
+const favorites = params.get('favoritos') === '1';
+const cursor = params.get('cursor') ?? undefined;
+const hasFilters = activeTags.length > 0 || collection !== undefined || favorites;
+
+const tags = tagService(app).list(user!.id);
+const collections = collectionService(app).list(user!.id);
+
+let result: Page<SearchHit> | null = null;
+let qError: string | undefined;
+let failed = false;
+if (q.length > MAX_QUERY_LENGTH) {
+  qError = `La búsqueda puede tener hasta ${MAX_QUERY_LENGTH} caracteres. Acórtala para buscar.`;
+} else if (q.trim()) {
+  try {
+    result = searchService(app).search(user!.id, { q, tags: activeTags, collection, favorites, cursor });
+  } catch (e) {
+    if (isValidationError(e)) qError = e.message;
+    else {
+      failed = true;
+      app.log.error('buscar: error al buscar', { err: e instanceof Error ? e.message : String(e) });
+    }
+  }
+}
+
+const here = Astro.url.pathname + Astro.url.search;
+const next = new URLSearchParams(params);
+if (result?.nextCursor) next.set('cursor', result.nextCursor);
+const nextHref = result?.nextCursor ? `/buscar?${next.toString()}` : undefined;
+const first = new URLSearchParams(params);
+first.delete('cursor');
+const firstHref = cursor ? `/buscar?${first.toString()}` : undefined;
+const clear = new URLSearchParams({ q });
+const clearHref = `/buscar?${clear.toString()}`;
+
+const shortQ = q.trim().slice(0, 60);
+const title = q.trim() ? `Buscar: ${shortQ}` : 'Buscar';
+const total = result?.total ?? 0;
+const announce = result ? (total === 0 ? `Sin resultados para «${shortQ}»` : `${total} resultado${total === 1 ? '' : 's'} para «${shortQ}»`) : '';
 ---
 
-<App title={q ? `Buscar: ${q}` : 'Buscar'} active="buscar" query={q}>
+<App title={title} active="buscar" query={q}>
   <h1>Buscar</h1>
-  {q && <p>{results.length} resultado{results.length === 1 ? '' : 's'} para «{q}»</p>}
-  <ol class="results" aria-label="Resultados">
+  <SearchForm q={q} qError={qError} tags={tags} collections={collections} activeTags={activeTags} collection={collection === undefined ? '' : String(collection)} favorites={favorites} />
+
+  <div id="search-results" data-announce={announce}>
     {
-      results.map((r) => (
-        <li data-bookmark-id={r.id}>
-          <a href={r.url} rel="noopener noreferrer" target="_blank" set:html={highlightToHtml(r.title_hl)} />
-          <p class="snippet" set:html={highlightToHtml(r.excerpt_hl)} />
-        </li>
-      ))
+      failed ? (
+        <Notice variant="error" title="No se pudo buscar">
+          <p>Algo falló en el servidor. Tus filtros siguen aplicados.</p>
+          <p><a class="btn btn-ghost btn-sm retry" href={here}><Icon name="refresh" size={16} />Reintentar</a></p>
+        </Notice>
+      ) : qError ? (
+        <Notice variant="warn" title="Búsqueda demasiado larga">
+          <p>{qError}</p>
+        </Notice>
+      ) : !result ? (
+        <EmptyState title="Encuentra cualquier enlace" icon="search" grid>
+          <ul>
+            <li>Escribe una o varias palabras: busca en el título, la descripción y el texto guardado de la página.</li>
+            <li>Usa comillas para una frase exacta: <span class="mono">"masa madre"</span>.</li>
+            <li>Combina la búsqueda con etiquetas, una colección o solo favoritos en «Filtros».</li>
+            <li>Pulsa <kbd>/</kbd> en cualquier pantalla para saltar al buscador.</li>
+          </ul>
+        </EmptyState>
+      ) : total === 0 ? (
+        <EmptyState title={`Sin resultados para «${shortQ}»`} icon="search">
+          <p>Prueba con estas ideas:</p>
+          <ul>
+            <li>Revisa la ortografía o usa una palabra más corta.</li>
+            <li>Quita las comillas si buscabas una frase exacta.</li>
+            <li>Busca una sola palabra clave en lugar de varias.</li>
+          </ul>
+          {hasFilters && <a slot="actions" class="btn btn-primary" href={clearHref}>Quitar filtros</a>}
+        </EmptyState>
+      ) : (
+        <section aria-label="Resultados" class="results">
+          <p class="summary"><span class="mono">{total}</span> resultado{total === 1 ? '' : 's'} para «{shortQ}»</p>
+          <div class="list">
+            {result.items.map((hit) => (
+              <SearchResult hit={hit} csrf={csrf ?? ''} volver={here} timeZone={user!.timezone} />
+            ))}
+          </div>
+          {(nextHref || firstHref) && (
+            <nav class="pager" aria-label="Paginación de resultados">
+              {firstHref ? <a class="btn btn-ghost" href={firstHref}>Primeros resultados</a> : <span />}
+              {nextHref && <a class="btn btn-ghost" href={nextHref} rel="next">Más resultados<Icon name="arrow-right" size={18} /></a>}
+            </nav>
+          )}
+        </section>
+      )
     }
-  </ol>
+  </div>
 </App>
 
+<script>
+  import '../scripts/search-live.ts';
+</script>
+
 <style>
-  .results {
-    list-style: none;
-    padding: 0;
-    display: grid;
-    gap: var(--s-3);
+  #search-results[aria-busy='true'] {
+    opacity: 0.55;
+    transition: opacity 0.15s ease;
   }
-  .results li {
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: var(--r-md);
-    padding: var(--s-4);
+  @media (prefers-reduced-motion: reduce) {
+    #search-results[aria-busy='true'] {
+      transition: none;
+    }
   }
-  .snippet {
-    margin: var(--s-2) 0 0;
+  .summary {
+    margin: 0 0 var(--s-3);
     color: var(--text-2);
+    font-weight: 500;
+  }
+  .list {
+    border: 1px solid var(--border);
+    border-radius: var(--r-lg);
+    overflow: hidden;
+    background: var(--surface);
+  }
+  .list :global(article:last-child) {
+    border-bottom: 0;
+  }
+  .pager {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: space-between;
+    gap: var(--s-3);
+    margin-top: var(--s-5);
+  }
+  .retry {
+    margin-top: var(--s-2);
+  }
+  kbd {
+    font: 500 13px var(--mf-mono);
+    padding: 1px 6px;
+    border: 1px solid var(--mf-paper-grid);
+    border-bottom-width: 2px;
+    border-radius: var(--r-sm);
+    background: var(--mf-paper);
   }
 </style>

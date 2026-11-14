@@ -1,0 +1,236 @@
+---
+// Formulario GET de /buscar: un campo, botón "Buscar" y filtros (etiquetas, colección, solo favoritos).
+// Todo viaja en la URL. Con HTMX (src/scripts/search-live.ts) busca en vivo sobre #search-results.
+import Icon from '../ui/Icon.astro';
+import Select from '../ui/Select.astro';
+import type { CollectionSummary, TagSummary } from '../../server/contracts.ts';
+
+interface Props {
+  q: string;
+  qError?: string;
+  tags: TagSummary[];
+  collections: CollectionSummary[];
+  activeTags: string[];
+  collection: string;
+  favorites: boolean;
+}
+const { q, qError, tags, collections, activeTags, collection, favorites } = Astro.props;
+const activeCount = activeTags.length + (collection ? 1 : 0) + (favorites ? 1 : 0);
+const colOptions = [
+  { value: '', label: 'Todas las colecciones' },
+  { value: 'sin-coleccion', label: 'Sin colección' },
+  ...collections.map((c) => ({ value: String(c.id), label: c.name })),
+];
+---
+
+<form
+  class="sf"
+  id="search-form"
+  method="get"
+  action="/buscar"
+  role="search"
+  aria-label="Buscar enlaces"
+  data-search-live
+  hx-get="/buscar"
+  hx-trigger="input changed delay:250ms from:#q, change from:#search-filters, submit"
+  hx-target="#search-results"
+  hx-select="#search-results"
+  hx-swap="outerHTML"
+  hx-push-url="true"
+  hx-sync="this:replace"
+>
+  <div class="row">
+    <div class="field q">
+      <label for="q">Buscar</label>
+      <input
+        id="q"
+        name="q"
+        type="search"
+        value={q}
+        maxlength="200"
+        autocomplete="off"
+        placeholder="Una palabra o una frase de tus enlaces"
+        aria-invalid={qError ? 'true' : undefined}
+        aria-describedby={qError ? 'q-error' : 'q-hint'}
+      />
+      <p class="hint" id="q-hint">Busca en el título, la descripción y el texto guardado de la página.</p>
+      {qError && <p class="error" id="q-error"><Icon name="alert" size={16} /><span>{qError}</span></p>}
+    </div>
+    <button class="btn btn-primary go" type="submit"><Icon name="search" size={18} />Buscar</button>
+  </div>
+
+  <details class="filters" id="search-filters" open={activeCount > 0}>
+    <summary>
+      <Icon name="menu" size={18} />
+      <span>Filtros</span>
+      {activeCount > 0 && <span class="count mono">{activeCount} activo{activeCount === 1 ? '' : 's'}</span>}
+      <Icon name="chevron-down" size={18} class="chev" />
+    </summary>
+    <div class="body">
+      <Select id="f-coleccion" name="coleccion" label="Colección" options={colOptions} selected={collection} />
+      <div class="fav">
+        <label class="opt"><input type="checkbox" name="favoritos" value="1" checked={favorites} /><span>Solo favoritos</span></label>
+      </div>
+      <fieldset class="tags">
+        <legend>Etiquetas</legend>
+        {tags.length === 0 && <p class="none">Aún no tienes etiquetas.</p>}
+        <div class="opts">
+          {tags.map((t) => (
+            <label class="opt"><input type="checkbox" name="etiqueta" value={t.key} checked={activeTags.includes(t.key)} /><span>{t.name} <span class="mono n">{t.count}</span></span></label>
+          ))}
+        </div>
+      </fieldset>
+    </div>
+  </details>
+</form>
+
+<style>
+  .sf {
+    display: grid;
+    gap: var(--s-3);
+    margin: var(--s-4) 0 var(--s-5);
+  }
+  .row {
+    display: flex;
+    gap: var(--s-3);
+    align-items: flex-start;
+  }
+  .q {
+    flex: 1;
+    min-width: 0;
+  }
+  .q input {
+    border-radius: var(--r-pill);
+    padding-left: var(--s-5);
+  }
+  .error {
+    display: flex;
+    gap: var(--s-2);
+    align-items: center;
+  }
+  .go {
+    /* Alineado con el campo: la etiqueta ocupa ~22px sobre él. */
+    margin-top: 30px;
+    flex: none;
+  }
+  .filters {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--r-lg);
+  }
+  summary {
+    display: flex;
+    align-items: center;
+    gap: var(--s-3);
+    min-height: var(--tap);
+    padding: 0 var(--s-4);
+    cursor: pointer;
+    font-weight: 700;
+    list-style: none;
+    border-radius: var(--r-lg);
+  }
+  summary::-webkit-details-marker {
+    display: none;
+  }
+  summary > span:first-of-type {
+    flex: none;
+  }
+  .count {
+    flex: 1;
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--mf-blue-deep);
+  }
+  summary > :global(.chev) {
+    margin-left: auto;
+  }
+  .filters[open] :global(.chev) {
+    transform: rotate(180deg);
+  }
+  .body {
+    display: grid;
+    grid-template-columns: minmax(0, 260px) minmax(0, 1fr);
+    gap: var(--s-4) var(--s-5);
+    padding: var(--s-2) var(--s-4) var(--s-4);
+    border-top: 1px solid var(--border);
+    align-items: start;
+  }
+  .fav {
+    grid-column: 1;
+  }
+  .tags {
+    grid-column: 2;
+    grid-row: 1 / span 2;
+    border: 0;
+    padding: 0;
+    margin: 0;
+    min-width: 0;
+  }
+  legend {
+    font-weight: 600;
+    font-size: 14px;
+    padding: 0;
+    margin-bottom: var(--s-2);
+  }
+  .opts {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--s-2);
+    max-height: 220px;
+    overflow-y: auto;
+    padding: 2px;
+  }
+  .opt {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--s-2);
+    min-height: var(--tap);
+    padding: 0 var(--s-3);
+    border: 1.5px solid var(--border);
+    border-radius: var(--r-pill);
+    background: var(--surface);
+    cursor: pointer;
+    font-size: 14px;
+    font-weight: 500;
+  }
+  .opt input {
+    width: 18px;
+    height: 18px;
+    margin: 0;
+    accent-color: var(--mf-blue-600);
+    flex: none;
+  }
+  .opt:has(input:checked) {
+    border-color: var(--mf-blue-600);
+    background: rgba(31, 139, 255, 0.08);
+  }
+  .opt:has(input:focus-visible) {
+    box-shadow: var(--focus-ring);
+  }
+  .n {
+    color: var(--text-muted);
+    font-size: 12px;
+  }
+  .none {
+    margin: 0;
+    color: var(--text-muted);
+  }
+  @media (max-width: 720px) {
+    .row {
+      flex-direction: column;
+      align-items: stretch;
+    }
+    .go {
+      margin-top: 0;
+      width: 100%;
+    }
+    .body {
+      grid-template-columns: minmax(0, 1fr);
+    }
+    .fav,
+    .tags {
+      grid-column: 1;
+      grid-row: auto;
+    }
+  }
+</style>

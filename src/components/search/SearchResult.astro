@@ -1,0 +1,21 @@
+---
+// Un resultado de búsqueda: reutiliza BookmarkRow (favicon, título con <mark>, dominio y fecha en mono,
+// etiquetas, colección, favorito y editar) y elige el fragmento donde está la coincidencia.
+// Los *Html llegan ya escapados de highlightToHtml (única excepción de set:html).
+import BookmarkRow from '../ui/BookmarkRow.astro';
+import type { SearchHit } from '../../server/contracts.ts';
+
+interface Props {
+  hit: SearchHit;
+  csrf: string;
+  volver: string;
+  timeZone?: string;
+}
+const { hit, csrf, volver, timeZone } = Astro.props;
+const hasMark = (html: string) => html.includes('<mark>');
+// Prioridad: texto guardado de la página si ahí está la coincidencia; si no, la descripción.
+const snippet = hasMark(hit.excerptHtml) ? hit.excerptHtml : hasMark(hit.descriptionHtml) ? hit.descriptionHtml : undefined;
+const titleHtml = hasMark(hit.titleHtml) ? hit.titleHtml : undefined;
+---
+
+<BookmarkRow bookmark={hit.bookmark} csrf={csrf} volver={volver} timeZone={timeZone} titleHtml={titleHtml} descriptionHtml={snippet} />
