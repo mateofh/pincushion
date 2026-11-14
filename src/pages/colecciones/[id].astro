@@ -1,0 +1,133 @@
+---
+// Una colección: renombrar (con error junto al campo) y borrar con confirmación ("Sus N enlaces pasarán a Sin colección").
+import App from '../../layouts/App.astro';
+import TextField from '../../components/ui/TextField.astro';
+import Button from '../../components/ui/Button.astro';
+import ConfirmPanel from '../../components/ui/ConfirmPanel.astro';
+import { collectionService } from '../../server/services/collections.ts';
+import { formString, seeOther, setFlash } from '../../server/http.ts';
+import { parseId } from '../../domain/authz.ts';
+import { toFieldErrors } from '../../domain/errors.ts';
+import { plural } from '../../components/library/library-url.ts';
+
+const { app, user, csrf } = Astro.locals;
+const svc = collectionService(app);
+const id = parseId(Astro.params.id);
+const collection = id === null ? undefined : svc.list(user!.id).find((c) => c.id === id);
+if (id === null || !collection) return Astro.rewrite('/404');
+
+let name = collection.name;
+let error = '';
+
+if (Astro.request.method === 'POST') {
+  const form = await Astro.request.clone().formData();
+  const accion = formString(form, 'accion', 20);
+  if (accion === 'borrar') {
+    const moved = svc.remove(user!.id, id);
+    if (moved === null) return Astro.rewrite('/404');
+    setFlash(Astro.cookies, app.config, {
+      kind: 'success',
+      message: `Colección «${collection.name}» borrada. ${plural(moved, 'enlace pasó', 'enlaces pasaron')} a Sin colección.`,
+    });
+    return seeOther('/colecciones');
+  }
+  name = formString(form, 'name', 400);
+  try {
+    const renamed = svc.rename(user!.id, id, name);
+    if (!renamed) return Astro.rewrite('/404');
+    setFlash(Astro.cookies, app.config, { kind: 'success', message: `Colección renombrada a «${renamed.name}».` });
+    return seeOther('/colecciones');
+  } catch (err) {
+    const f = toFieldErrors(err);
+    if (!f) throw err;
+    error = Object.values(f)[0]!;
+    Astro.response.status = 422;
+  }
+}
+
+const confirming = Astro.url.searchParams.get('borrar') === '1';
+---
+
+<App title={confirming ? `Borrar «${collection.name}»` : `Colección «${collection.name}»`} active="colecciones">
+  <div class="wrap">
+    <p class="crumb"><a href="/colecciones">← Colecciones</a></p>
+    <h1>{collection.name}</h1>
+    <p class="hint">{plural(collection.count, 'enlace', 'enlaces')} · <a href={`/?coleccion=${collection.id}`}>Abrir en la Biblioteca</a></p>
+
+    {
+      confirming ? (
+        <ConfirmPanel
+          title="¿Borrar esta colección?"
+          scope={`Sus ${plural(collection.count, 'enlace', 'enlaces')} pasarán a Sin colección. Los enlaces no se borran.`}
+          action={`/colecciones/${collection.id}`}
+          csrf={csrf}
+          fields={{ accion: 'borrar' }}
+          confirmLabel="Borrar colección"
+          cancelHref={`/colecciones/${collection.id}`}
+          id="borrar"
+        />
+      ) : (
+        <>
+          <form method="post" action={`/colecciones/${collection.id}`} class="rename" novalidate>
+            <input type="hidden" name="_csrf" value={csrf} />
+            <input type="hidden" name="accion" value="renombrar" />
+            <TextField id="name" name="name" label="Nombre de la colección" value={name} error={error} maxlength={80} />
+            <div class="actions">
+              <Button variant="primary" type="submit" icon="check">Guardar nombre</Button>
+              <Button variant="ghost" href="/colecciones">Cancelar</Button>
+            </div>
+          </form>
+          <section class="danger" aria-labelledby="borrar-t">
+            <h2 id="borrar-t">Borrar colección</h2>
+            <p>Sus enlaces pasan a «Sin colección»; no se borran.</p>
+            <Button variant="ghost" href={`/colecciones/${collection.id}?borrar=1`} icon="trash" class="del">Borrar colección</Button>
+          </section>
+        </>
+      )
+    }
+  </div>
+</App>
+
+<style>
+  .wrap {
+    max-width: 640px;
+    display: grid;
+    gap: var(--s-4);
+  }
+  .wrap h1,
+  .wrap p {
+    margin: 0;
+  }
+  .crumb a {
+    display: inline-flex;
+    align-items: center;
+    min-height: var(--tap);
+  }
+  .hint {
+    color: var(--text-2);
+  }
+  .rename {
+    display: grid;
+    gap: var(--s-4);
+  }
+  .actions {
+    display: flex;
+    gap: var(--s-3);
+    flex-wrap: wrap;
+  }
+  .danger {
+    padding-top: var(--s-4);
+    border-top: 1px solid var(--border);
+    display: grid;
+    gap: var(--s-3);
+  }
+  .danger h2 {
+    margin: 0;
+    font-size: 18px;
+  }
+  .danger :global(.del) {
+    color: var(--mf-warn-text);
+    border-color: var(--mf-warn-text);
+    justify-self: start;
+  }
+</style>

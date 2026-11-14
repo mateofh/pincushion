@@ -9,11 +9,11 @@ test('entrar, guardar, listar y buscar @movil @sin-js', async ({ signedIn: page 
   await page.getByRole('button', { name: 'Guardar', exact: true }).click();
 
   await expect(page).toHaveURL('/');
-  await expect(page.getByRole('status')).toContainText('Enlace guardado');
-  await expect(page.getByRole('link', { name: 'Pan de masa madre' })).toBeVisible();
+  await expect(page.locator('#flash')).toContainText('Enlace guardado');
+  await expect(page.getByRole('link', { name: 'Pan de masa madre' }).first()).toBeVisible();
 
   await page.reload();
-  await expect(page.getByRole('link', { name: 'Pan de masa madre' })).toBeVisible();
+  await expect(page.getByRole('link', { name: 'Pan de masa madre' }).first()).toBeVisible();
 
   await page.goto('/buscar?q=masa');
   await expect(page.locator('mark').first()).toHaveText(/masa/i);

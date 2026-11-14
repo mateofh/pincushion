@@ -1,0 +1,129 @@
+---
+// Una etiqueta: renombrar (error de nombre repetido junto al campo) y borrar con confirmación.
+import App from '../../layouts/App.astro';
+import TextField from '../../components/ui/TextField.astro';
+import Button from '../../components/ui/Button.astro';
+import ConfirmPanel from '../../components/ui/ConfirmPanel.astro';
+import { tagService } from '../../server/services/tags.ts';
+import { formString, seeOther, setFlash } from '../../server/http.ts';
+import { parseId } from '../../domain/authz.ts';
+import { toFieldErrors } from '../../domain/errors.ts';
+import { plural } from '../../components/library/library-url.ts';
+
+const { app, user, csrf } = Astro.locals;
+const svc = tagService(app);
+const id = parseId(Astro.params.id);
+const tag = id === null ? undefined : svc.list(user!.id).find((t) => t.id === id);
+if (id === null || !tag) return Astro.rewrite('/404');
+
+let name = tag.name;
+let error = '';
+
+if (Astro.request.method === 'POST') {
+  const form = await Astro.request.clone().formData();
+  const accion = formString(form, 'accion', 20);
+  if (accion === 'borrar') {
+    if (!svc.remove(user!.id, id)) return Astro.rewrite('/404');
+    setFlash(Astro.cookies, app.config, { kind: 'success', message: `Etiqueta «${tag.name}» borrada. Los enlaces se conservan.` });
+    return seeOther('/etiquetas');
+  }
+  name = formString(form, 'name', 400);
+  try {
+    const renamed = svc.rename(user!.id, id, name);
+    if (!renamed) return Astro.rewrite('/404');
+    setFlash(Astro.cookies, app.config, { kind: 'success', message: `Etiqueta renombrada a «${renamed.name}».` });
+    return seeOther('/etiquetas');
+  } catch (err) {
+    const f = toFieldErrors(err);
+    if (!f) throw err;
+    error = Object.values(f)[0]!;
+    Astro.response.status = 422;
+  }
+}
+
+const confirming = Astro.url.searchParams.get('borrar') === '1';
+---
+
+<App title={confirming ? `Borrar «${tag.name}»` : `Etiqueta «${tag.name}»`} active="etiquetas">
+  <div class="wrap">
+    <p class="crumb"><a href="/etiquetas">← Etiquetas</a></p>
+    <h1>{tag.name}</h1>
+    <p class="hint">{plural(tag.count, 'enlace', 'enlaces')} · <a href={`/?etiqueta=${encodeURIComponent(tag.key)}`}>Abrir en la Biblioteca</a></p>
+
+    {
+      confirming ? (
+        <ConfirmPanel
+          title="¿Borrar esta etiqueta?"
+          scope={`Se quitará de ${plural(tag.count, 'enlace', 'enlaces')}. Los enlaces no se borran.`}
+          action={`/etiquetas/${tag.id}`}
+          csrf={csrf}
+          fields={{ accion: 'borrar' }}
+          confirmLabel="Borrar etiqueta"
+          cancelHref={`/etiquetas/${tag.id}`}
+          id="borrar"
+        />
+      ) : (
+        <>
+          <form method="post" action={`/etiquetas/${tag.id}`} class="rename" novalidate>
+            <input type="hidden" name="_csrf" value={csrf} />
+            <input type="hidden" name="accion" value="renombrar" />
+            <TextField id="name" name="name" label="Nombre de la etiqueta" value={name} error={error} maxlength={40} />
+            <div class="actions">
+              <Button variant="primary" type="submit" icon="check">Guardar nombre</Button>
+              <Button variant="ghost" href="/etiquetas">Cancelar</Button>
+            </div>
+          </form>
+          <section class="danger" aria-labelledby="borrar-t">
+            <h2 id="borrar-t">Borrar etiqueta</h2>
+            <p>Se quita de sus enlaces; los enlaces no se borran.</p>
+            <Button variant="ghost" href={`/etiquetas/${tag.id}?borrar=1`} icon="trash" class="del">Borrar etiqueta</Button>
+          </section>
+        </>
+      )
+    }
+  </div>
+</App>
+
+<style>
+  .wrap {
+    max-width: 640px;
+    display: grid;
+    gap: var(--s-4);
+  }
+  .wrap h1,
+  .wrap p {
+    margin: 0;
+  }
+  .crumb a {
+    display: inline-flex;
+    align-items: center;
+    min-height: var(--tap);
+  }
+  .hint {
+    color: var(--text-2);
+  }
+  .rename {
+    display: grid;
+    gap: var(--s-4);
+  }
+  .actions {
+    display: flex;
+    gap: var(--s-3);
+    flex-wrap: wrap;
+  }
+  .danger {
+    padding-top: var(--s-4);
+    border-top: 1px solid var(--border);
+    display: grid;
+    gap: var(--s-3);
+  }
+  .danger h2 {
+    margin: 0;
+    font-size: 18px;
+  }
+  .danger :global(.del) {
+    color: var(--mf-warn-text);
+    border-color: var(--mf-warn-text);
+    justify-self: start;
+  }
+</style>

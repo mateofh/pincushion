@@ -1,0 +1,313 @@
+---
+// Editar enlace: título, descripción, texto para la búsqueda, etiquetas, colección (existente o nueva) y favorito.
+// POST con PRG a `volver`; con errores se vuelve a pintar (422) conservando lo escrito.
+import App from '../../../layouts/App.astro';
+import TextField from '../../../components/ui/TextField.astro';
+import TextArea from '../../../components/ui/TextArea.astro';
+import TagInput from '../../../components/ui/TagInput.astro';
+import Select from '../../../components/ui/Select.astro';
+import Button from '../../../components/ui/Button.astro';
+import Notice from '../../../components/ui/Notice.astro';
+import Favicon from '../../../components/ui/Favicon.astro';
+import FetchStatusBadge from '../../../components/ui/FetchStatusBadge.astro';
+import { bookmarkService } from '../../../server/services/bookmarks.ts';
+import { collectionService } from '../../../server/services/collections.ts';
+import { tagService } from '../../../server/services/tags.ts';
+import { cookieName, formString, safeReturnPath, seeOther, setFlash } from '../../../server/http.ts';
+import { parseId } from '../../../domain/authz.ts';
+import { toFieldErrors } from '../../../domain/errors.ts';
+import { canRetryManually } from '../../../domain/fetch-state.ts';
+import { formatDateTime } from '../../../domain/dates.ts';
+
+const { app, user, csrf } = Astro.locals;
+const userId = user!.id;
+const id = parseId(Astro.params.id);
+const svc = bookmarkService(app);
+const bookmark = id === null ? null : svc.get(userId, id);
+if (id === null || !bookmark) return Astro.rewrite('/404');
+
+// Adónde volver: ?volver= explícito, o el último contexto de la Biblioteca (cookie pc_ctx).
+function fromContext(): string {
+  return safeReturnPath(Astro.cookies.get(cookieName(app.config, 'pc_ctx'))?.value, '/');
+}
+
+const collections = collectionService(app).list(userId);
+const suggestions = tagService(app).list(userId).map((t) => t.name);
+
+let volver = safeReturnPath(Astro.url.searchParams.get('volver'), '');
+if (!volver) volver = fromContext();
+let errors: Record<string, string> = {};
+let values = {
+  title: bookmark.title,
+  description: bookmark.description,
+  excerpt: bookmark.excerpt,
+  tags: bookmark.tags.map((t) => t.name).join(', '),
+  coleccion: bookmark.collection ? String(bookmark.collection.id) : '',
+  coleccionNueva: '',
+  favorito: bookmark.isFavorite,
+};
+
+if (Astro.request.method === 'POST') {
+  const form = await Astro.request.clone().formData();
+  volver = safeReturnPath(formString(form, 'volver', 1000), '/');
+  values = {
+    title: formString(form, 'title', 2000),
+    description: formString(form, 'description', 5000),
+    excerpt: formString(form, 'excerpt', 20000),
+    tags: formString(form, 'tags', 3000),
+    coleccion: formString(form, 'coleccion', 40),
+    coleccionNueva: formString(form, 'coleccion_nueva', 400),
+    favorito: formString(form, 'favorito', 2) === '1',
+  };
+  const newName = values.coleccionNueva.trim();
+  const target = values.coleccion === '' ? null : parseId(values.coleccion);
+  try {
+    const updated = svc.update(userId, id, {
+      title: values.title,
+      description: values.description,
+      excerpt: values.excerpt,
+      tags: values.tags.split(','),
+      collectionId: newName ? undefined : (target ?? (values.coleccion === '' ? null : -1)),
+      newCollectionName: newName || undefined,
+      isFavorite: values.favorito,
+    });
+    if (!updated) return Astro.rewrite('/404');
+    setFlash(Astro.cookies, app.config, { kind: 'success', message: 'Cambios guardados.' });
+    return seeOther(volver);
+  } catch (err) {
+    const fields = toFieldErrors(err);
+    if (!fields) throw err;
+    errors = fields;
+    // El error de colección va junto al campo que se usó (nombre nuevo o selección).
+    if (errors.collection) {
+      const msg = errors.collection;
+      delete errors.collection;
+      if (newName) errors.coleccion_nueva = msg;
+      else errors.coleccion = msg;
+    }
+    Astro.response.status = 422;
+  }
+}
+
+const tz = user!.timezone;
+const hasErrors = Object.keys(errors).length > 0;
+const colOptions = [{ value: '', label: 'Sin colección' }, ...collections.map((c) => ({ value: String(c.id), label: c.name }))];
+const here = `/enlaces/${id}`;
+const hereWithBack = volver === '/' ? here : `${here}?volver=${encodeURIComponent(volver)}`;
+---
+
+<App title={`Editar «${bookmark.title.slice(0, 60)}»`} active="biblioteca">
+  <div class="page">
+    <p class="crumb"><a href={volver}>← Volver</a></p>
+    <h1>Editar enlace</h1>
+
+    <section class="summary" aria-label="Datos del enlace">
+      <div class="who">
+        <Favicon domain={bookmark.domain} hasFavicon={bookmark.hasFavicon} size={32} />
+        <div class="who-text">
+          <p class="mono domain">{bookmark.domain}</p>
+          <p class="url"><a href={bookmark.url} target="_blank" rel="noopener noreferrer">{bookmark.url}<span class="visually-hidden"> (se abre en una pestaña nueva)</span></a></p>
+        </div>
+      </div>
+      <div class="status">
+        <p class="status-line">
+          <FetchStatusBadge status={bookmark.fetchStatus} />
+          <span class="when">Guardado el {formatDateTime(bookmark.createdAt, tz)}</span>
+        </p>
+        {
+          canRetryManually(bookmark.fetchStatus) && (
+            <form method="post" action={`/enlaces/${id}/reintentar`}>
+              <input type="hidden" name="_csrf" value={csrf} />
+              <input type="hidden" name="volver" value={hereWithBack} />
+              <Button variant="ghost" size="sm" type="submit" icon="refresh">Reintentar</Button>
+            </form>
+          )
+        }
+      </div>
+    </section>
+
+    {
+      bookmark.trashedAt !== null && (
+        <Notice variant="warn" title="Este enlace está en la papelera">
+          <p>Restáuralo para volver a verlo en la Biblioteca.</p>
+          <form method="post" action={`/enlaces/${id}/restaurar`} class="inline">
+            <input type="hidden" name="_csrf" value={csrf} />
+            <input type="hidden" name="volver" value={hereWithBack} />
+            <Button variant="secondary" size="sm" type="submit" icon="undo">Restaurar</Button>
+          </form>
+        </Notice>
+      )
+    }
+
+    {hasErrors && <Notice variant="error" title="Revisa los campos marcados">No se guardó ningún cambio. Lo que escribiste sigue en el formulario.</Notice>}
+
+    <form method="post" class="edit" novalidate>
+      <input type="hidden" name="_csrf" value={csrf} />
+      <input type="hidden" name="volver" value={volver} />
+      <TextField id="title" name="title" label="Título" value={values.title} error={errors.title} hint="Si lo dejas vacío usaremos el dominio. Máximo 300 caracteres." />
+      <TextArea id="description" name="description" label="Descripción" value={values.description} error={errors.description} rows={3} hint="Máximo 1000 caracteres." />
+      <TextArea id="excerpt" name="excerpt" label="Texto para la búsqueda" value={values.excerpt} error={errors.excerpt} rows={6} hint="Lo que Pincushion lee al buscar. Puedes pegar aquí el fragmento que quieras encontrar luego." />
+      <TagInput id="tags" name="tags" label="Etiquetas" value={values.tags} suggestions={suggestions} error={errors.tags} />
+      <fieldset class="col">
+        <legend>Colección</legend>
+        <Select id="coleccion" name="coleccion" label="Colección" options={colOptions} selected={values.coleccion} error={errors.coleccion} hideLabel />
+        <TextField id="coleccion_nueva" name="coleccion_nueva" label="O crea una colección nueva" value={values.coleccionNueva} error={errors.coleccion_nueva} maxlength={80} hint="Si escribes un nombre, el enlace va a esa colección." />
+      </fieldset>
+      <div class="fav">
+        <label class="check"><input type="checkbox" name="favorito" value="1" checked={values.favorito} /> <span>Favorito</span></label>
+      </div>
+      <div class="actions">
+        <Button variant="primary" type="submit" icon="check">Guardar cambios</Button>
+        <Button variant="ghost" href={volver}>Cancelar</Button>
+      </div>
+    </form>
+
+    <section class="danger" aria-labelledby="peligro">
+      <h2 id="peligro">Papelera</h2>
+      {
+        bookmark.trashedAt === null ? (
+          <>
+            <p>El enlace sale de tu Biblioteca pero lo puedes recuperar durante 30 días.</p>
+            <form method="post" action={`/enlaces/${id}/papelera`}>
+              <input type="hidden" name="_csrf" value={csrf} />
+              <input type="hidden" name="volver" value="/" />
+              <Button variant="ghost" type="submit" icon="trash" class="trash">Mover a la papelera</Button>
+            </form>
+          </>
+        ) : (
+          <>
+            <p>Si ya no lo necesitas, puedes eliminarlo para siempre.</p>
+            <Button variant="ghost" href={`/enlaces/${id}/eliminar`} icon="trash" class="trash">Eliminar definitivamente</Button>
+          </>
+        )
+      }
+    </section>
+  </div>
+</App>
+
+<style>
+  .page {
+    max-width: 720px;
+    display: grid;
+    gap: var(--s-4);
+  }
+  .page h1 {
+    margin: 0;
+  }
+  .crumb {
+    margin: 0;
+  }
+  .crumb a {
+    display: inline-flex;
+    align-items: center;
+    min-height: var(--tap);
+  }
+  .summary {
+    display: grid;
+    gap: var(--s-3);
+    padding: var(--s-4);
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--r-lg);
+  }
+  .who {
+    display: flex;
+    gap: var(--s-3);
+    align-items: center;
+    min-width: 0;
+  }
+  .who-text {
+    min-width: 0;
+  }
+  .who-text p {
+    margin: 0;
+  }
+  .domain {
+    font-size: 12px;
+    color: var(--text-muted);
+  }
+  .url {
+    overflow-wrap: anywhere;
+    word-break: break-all;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+    font-size: 14px;
+  }
+  .status {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--s-3);
+    align-items: center;
+    justify-content: space-between;
+  }
+  .status-line {
+    margin: 0;
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--s-3);
+    align-items: center;
+  }
+  .when {
+    font-size: 14px;
+    color: var(--text-2);
+  }
+  .edit {
+    display: grid;
+    gap: var(--s-4);
+  }
+  .col {
+    border: 0;
+    padding: 0;
+    margin: 0;
+    display: grid;
+    gap: var(--s-3);
+    min-width: 0;
+  }
+  .col legend {
+    padding: 0;
+    margin-bottom: var(--s-2);
+    font-weight: 600;
+    font-size: 14px;
+  }
+  .check {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--s-3);
+    min-height: var(--tap);
+    font-weight: 600;
+    cursor: pointer;
+  }
+  .check input {
+    width: 22px;
+    height: 22px;
+    accent-color: var(--accent);
+  }
+  .actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--s-3);
+    align-items: center;
+  }
+  .inline {
+    margin-top: var(--s-2);
+  }
+  .danger {
+    margin-top: var(--s-5);
+    padding-top: var(--s-4);
+    border-top: 1px solid var(--border);
+  }
+  .danger h2 {
+    margin: 0 0 var(--s-2);
+    font-size: 18px;
+  }
+  .danger p {
+    margin: 0 0 var(--s-3);
+    color: var(--text-2);
+  }
+  .danger :global(.trash) {
+    color: var(--mf-warn-text);
+    border-color: var(--mf-warn-text);
+  }
+</style>

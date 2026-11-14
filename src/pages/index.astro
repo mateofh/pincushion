@@ -1,48 +1,197 @@
 ---
-// Biblioteca. ESQUELETO (Ola 0): lista simple. El stream de Biblioteca la completa.
+// Biblioteca: lista paginada con filtros, vista, orden y selección masiva. Todo el estado vive en la URL.
 import App from '../layouts/App.astro';
-import { listBookmarks } from '../server/services/bookmarks.ts';
+import LibraryShell from '../components/ui/LibraryShell.astro';
+import Sidebar from '../components/ui/Sidebar.astro';
+import MobileFilters from '../components/ui/MobileFilters.astro';
+import Toolbar from '../components/ui/Toolbar.astro';
+import ViewToggle from '../components/ui/ViewToggle.astro';
+import BookmarkList from '../components/ui/BookmarkList.astro';
+import BookmarkCard from '../components/ui/BookmarkCard.astro';
+import BookmarkRow from '../components/ui/BookmarkRow.astro';
+import Pagination from '../components/ui/Pagination.astro';
+import EmptyState from '../components/ui/EmptyState.astro';
+import Button from '../components/ui/Button.astro';
+import SortControl from '../components/library/SortControl.astro';
+import ActiveFilters from '../components/library/ActiveFilters.astro';
+import LibraryBulkBar from '../components/library/LibraryBulkBar.astro';
+import { libraryHref, libraryPairs, parseLibraryParams, plural } from '../components/library/library-url.ts';
+import { bookmarkService } from '../server/services/bookmarks.ts';
+import { collectionService } from '../server/services/collections.ts';
+import { tagService } from '../server/services/tags.ts';
+import { cookieName } from '../server/http.ts';
+import type { ViewMode } from '../server/contracts.ts';
 
-const { app, user } = Astro.locals;
-const items = listBookmarks(app, user!.id);
+const { app, user, csrf } = Astro.locals;
+const userId = user!.id;
+const params = parseLibraryParams(Astro.url.searchParams);
+
+// Vista: la URL manda; si no viene, la cookie; si no, tarjetas. Una vista explícita se recuerda.
+const viewCookie = cookieName(app.config, 'pc_vista');
+const saved = Astro.cookies.get(viewCookie)?.value;
+const view: ViewMode = params.vista ?? (saved === 'lista' ? 'lista' : 'tarjetas');
+if (params.vista && params.vista !== saved) {
+  Astro.cookies.set(viewCookie, params.vista, { path: '/', sameSite: 'lax', secure: app.config.secureCookies, maxAge: 60 * 60 * 24 * 365 });
+}
+
+// Contexto para «volver» desde Editar (el Referer está desactivado por la política de la app).
+Astro.cookies.set(cookieName(app.config, 'pc_ctx'), Astro.url.pathname + Astro.url.search, { path: '/', sameSite: 'lax', httpOnly: true, secure: app.config.secureCookies, maxAge: 60 * 60 * 8 });
+
+const collectionSvc = collectionService(app);
+const collections = collectionSvc.list(userId);
+const counts = collectionSvc.counts(userId);
+const allTags = tagService(app).list(userId);
+
+const activeCollection = typeof params.coleccion === 'number' ? collections.find((c) => c.id === params.coleccion) : undefined;
+if (typeof params.coleccion === 'number' && !activeCollection) return Astro.rewrite('/404');
+
+const page = bookmarkService(app).list(userId, {
+  collection: params.coleccion ?? undefined,
+  tags: params.etiquetas,
+  favorites: params.favoritos,
+  sort: params.orden,
+  cursor: params.cursor,
+});
+
+const tagName = (key: string) => allTags.find((t) => t.key === key)?.name ?? key;
+const hasFilters = params.coleccion !== null || params.etiquetas.length > 0 || params.favoritos;
+const heading = activeCollection
+  ? activeCollection.name
+  : params.coleccion === 'sin-coleccion'
+    ? 'Sin colección'
+    : params.etiquetas.length === 1
+      ? `Etiqueta: ${tagName(params.etiquetas[0]!)}`
+      : params.etiquetas.length > 1
+        ? `Etiquetas: ${params.etiquetas.map(tagName).join(', ')}`
+        : params.favoritos
+          ? 'Favoritos'
+          : 'Biblioteca';
+
+const current = activeCollection
+  ? 'coleccion'
+  : params.coleccion === 'sin-coleccion'
+    ? 'sin-coleccion'
+    : params.etiquetas.length > 0
+      ? 'etiqueta'
+      : params.favoritos
+        ? 'favoritos'
+        : 'todos';
+
+// Enlaces que conservan la URL actual (vista tal como vino), cambiando una sola cosa.
+const base = { vista: params.vista, coleccion: params.coleccion, etiquetas: params.etiquetas, favoritos: params.favoritos, orden: params.orden };
+const filterChips = [
+  ...(params.coleccion !== null
+    ? [{ label: `Colección: ${activeCollection?.name ?? 'Sin colección'}`, href: libraryHref({ ...base, coleccion: null }) }]
+    : []),
+  ...params.etiquetas.map((t) => ({ label: `Etiqueta: ${tagName(t)}`, href: libraryHref({ ...base, etiquetas: params.etiquetas.filter((x) => x !== t) }) })),
+  ...(params.favoritos ? [{ label: 'Favoritos', href: libraryHref({ ...base, favoritos: false }) }] : []),
+];
+const clearHref = libraryHref({ vista: params.vista, orden: params.orden });
+
+const viewHref = (v: ViewMode) => libraryHref({ ...base, vista: v });
+const sortFields = libraryPairs({ ...base, vista: view, orden: undefined });
+const volver = Astro.url.pathname + Astro.url.search;
+const olderHref = page.nextCursor ? libraryHref({ ...base, cursor: page.nextCursor }) : undefined;
+const newerHref = params.cursor ? libraryHref(base) : undefined;
+const countLabel = plural(page.total, 'enlace', 'enlaces');
+const filters = { counts, collections, tags: allTags, current, collectionId: activeCollection?.id, activeTags: params.etiquetas } as const;
+const pageTitle = params.cursor ? `${heading} (más antiguos)` : heading;
 ---
 
-<App title="Biblioteca" active="biblioteca">
-  <h1>Biblioteca</h1>
-  {
-    items.length === 0 ? (
-      <p>Todavía no guardaste ningún enlace. <a href="/guardar">Guarda el primero</a>.</p>
-    ) : (
-      <ul class="list" aria-label="Enlaces guardados">
-        {items.map((b) => (
-          <li data-bookmark-id={b.id}>
-            <a href={b.url} rel="noopener noreferrer" target="_blank">{b.title}</a>
-            <span class="domain">{b.domain}</span>
-          </li>
-        ))}
-      </ul>
-    )
-  }
+<App title={pageTitle} active="biblioteca">
+  <LibraryShell>
+    <Sidebar slot="sidebar" {...filters} />
+    <MobileFilters {...filters} />
+
+    <header class="head">
+      <h1>{heading}</h1>
+      <ActiveFilters items={filterChips} clearHref={clearHref} />
+    </header>
+
+    {
+      page.items.length === 0 ? (
+        counts.all === 0 && !hasFilters ? (
+          <EmptyState title="Guarda tu primer enlace" icon="bookmark" grid>
+            <p>Aquí aparecerán los enlaces que guardes. Para empezar, elige una de estas dos formas:</p>
+            <ol class="steps">
+              <li><strong>Instala el bookmarklet</strong> en tu barra de marcadores y púlsalo en cualquier página.</li>
+              <li><strong>Pega una URL</strong> en el formulario si prefieres guardar un enlace a mano.</li>
+            </ol>
+            <Fragment slot="actions">
+              <Button href="/bookmarklet" variant="primary">Instala el bookmarklet</Button>
+              <Button href="/guardar" variant="ghost">Pega una URL</Button>
+            </Fragment>
+          </EmptyState>
+        ) : activeCollection && params.etiquetas.length === 0 && !params.favoritos && !params.cursor ? (
+          <EmptyState title="Esta colección está vacía" icon="folder">
+            <p>Para mover enlaces aquí, selecciona uno o varios en la Biblioteca y usa «Mover a…».</p>
+            <Fragment slot="actions">
+              <Button href="/" variant="primary">Ir a la Biblioteca</Button>
+              <Button href="/guardar" variant="ghost">Guardar enlace</Button>
+            </Fragment>
+          </EmptyState>
+        ) : (
+          <EmptyState title="Ningún enlace coincide con estos filtros" icon="search">
+            <p>
+              {params.favoritos && !params.coleccion && params.etiquetas.length === 0
+                ? 'Aún no tienes favoritos. Marca la estrella de un enlace para verlo aquí.'
+                : 'Prueba con menos filtros o con otra etiqueta.'}
+            </p>
+            <Button slot="actions" href={clearHref} variant="secondary">Quitar filtros</Button>
+          </EmptyState>
+        )
+      ) : (
+        <>
+          <Toolbar>
+            <p class="count mono">{countLabel}</p>
+            <Fragment slot="controls">
+              <ViewToggle view={view} hrefs={{ tarjetas: viewHref('tarjetas'), lista: viewHref('lista') }} />
+              <SortControl action="/" value={params.orden} fields={sortFields} />
+            </Fragment>
+          </Toolbar>
+          <LibraryBulkBar
+            csrf={csrf}
+            volver={volver}
+            collections={collections}
+            tagSuggestions={allTags.map((t) => t.name)}
+            showRemoveTag={params.etiquetas.length > 0}
+            showUnfavorite={params.favoritos}
+          />
+          <BookmarkList view={view}>
+            {page.items.map((b) =>
+              view === 'lista' ? (
+                <BookmarkRow bookmark={b} csrf={csrf} volver={volver} selectable timeZone={user!.timezone} />
+              ) : (
+                <BookmarkCard bookmark={b} csrf={csrf} volver={volver} selectable timeZone={user!.timezone} />
+              ),
+            )}
+          </BookmarkList>
+          <Pagination olderHref={olderHref} newerHref={newerHref} />
+        </>
+      )
+    }
+  </LibraryShell>
 </App>
 
 <style>
-  .list {
-    list-style: none;
-    padding: 0;
+  .head {
+    display: grid;
+    gap: var(--s-3);
+  }
+  .head h1 {
+    margin: 0;
+    overflow-wrap: anywhere;
+  }
+  .count {
+    margin: 0;
+    font-size: 13px;
+    color: var(--text-muted);
+  }
+  .steps {
+    margin: var(--s-3) 0 0;
+    padding-left: 1.2em;
     display: grid;
     gap: var(--s-2);
-  }
-  .list li {
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: var(--r-md);
-    padding: var(--s-3) var(--s-4);
-    display: flex;
-    gap: var(--s-3);
-    align-items: baseline;
-  }
-  .domain {
-    font: 400 12px var(--mf-mono);
-    color: var(--text-muted);
+    text-align: left;
   }
 </style>
