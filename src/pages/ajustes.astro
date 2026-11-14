@@ -1,0 +1,183 @@
+---
+// Ajustes: zona horaria, cambio de contraseña y cerrar sesión en todos los dispositivos. PRG con flash.
+import App from '../layouts/App.astro';
+import { COMMON_TIMEZONES, PASSWORD_MAX, PASSWORD_MIN, changePassword, logoutEverywhere, setTimezone } from '../server/auth/account.ts';
+import { clearSessionCookie } from '../server/auth/sessions.ts';
+import { formString, seeOther, setFlash } from '../server/http.ts';
+
+const { app, user, session, csrf, requestId } = Astro.locals;
+const { config } = app;
+if (!user || !session) return Astro.redirect('/entrar?next=%2Fajustes', 303);
+
+let timezone = user.timezone;
+const errors: { timezone?: string; current?: string; next?: string; confirm?: string; form?: string } = {};
+
+if (Astro.request.method === 'POST') {
+  const form = await Astro.request.formData();
+  const accion = formString(form, 'accion', 40);
+  if (accion === 'zona') {
+    timezone = formString(form, 'timezone', 64);
+    const r = setTimezone(app, user.id, timezone);
+    if (r.ok) {
+      setFlash(Astro.cookies, config, { kind: 'success', message: 'Zona horaria guardada.' });
+      return seeOther('/ajustes');
+    }
+    errors.timezone = r.message;
+    Astro.response.status = 422;
+  } else if (accion === 'contrasena') {
+    const r = await changePassword(app, {
+      userId: user.id,
+      sessionId: session.id,
+      current: formString(form, 'current_password', PASSWORD_MAX + 1),
+      next: formString(form, 'new_password', PASSWORD_MAX + 1),
+      confirm: formString(form, 'confirm_password', PASSWORD_MAX + 1),
+      requestId,
+    });
+    if (r.ok) {
+      const others = r.revoked === 1 ? 'Cerramos tu otra sesión abierta.' : r.revoked > 1 ? `Cerramos tus otras ${r.revoked} sesiones abiertas.` : '';
+      setFlash(Astro.cookies, config, { kind: 'success', message: `Contraseña cambiada. ${others}`.trim() });
+      return seeOther('/ajustes');
+    }
+    errors[r.field] = r.message;
+    if (r.retryAfterS) {
+      Astro.response.status = 429;
+      Astro.response.headers.set('Retry-After', String(r.retryAfterS));
+    } else {
+      Astro.response.status = 422;
+    }
+  } else if (accion === 'cerrar-sesiones') {
+    logoutEverywhere(app, user.id, requestId);
+    clearSessionCookie(Astro.cookies, config);
+    setFlash(Astro.cookies, config, { kind: 'info', message: 'Cerraste sesión en todos los dispositivos.' });
+    return seeOther('/entrar');
+  } else {
+    return seeOther('/ajustes');
+  }
+}
+
+const zones = COMMON_TIMEZONES.some((z) => z.value === user.timezone)
+  ? COMMON_TIMEZONES
+  : [{ value: user.timezone, label: user.timezone }, ...COMMON_TIMEZONES];
+let nowText = '';
+try {
+  nowText = new Intl.DateTimeFormat('es-ES', { timeZone: user.timezone, hour: '2-digit', minute: '2-digit', weekday: 'long' }).format(app.clock.now());
+} catch {
+  nowText = '';
+}
+const describedBy = (id: string, hint?: string) => [hint, errors[id as keyof typeof errors] ? `${id}-error` : ''].filter(Boolean).join(' ') || undefined;
+---
+
+<App title="Ajustes" active="ajustes">
+  <h1>Ajustes</h1>
+  <p class="account">Cuenta: <strong>{user.email}</strong></p>
+
+  <section class="panel">
+    <h2>Zona horaria</h2>
+    <p class="hint-text">Se usa para mostrar las fechas de tus enlaces.{nowText && ` Ahora mismo allí es ${nowText}.`}</p>
+    <form method="post" class="stack">
+      <input type="hidden" name="_csrf" value={csrf} />
+      <input type="hidden" name="accion" value="zona" />
+      <div class="field">
+        <label for="timezone">Zona horaria</label>
+        <select id="timezone" name="timezone" aria-invalid={errors.timezone ? 'true' : undefined} aria-describedby={describedBy('timezone')}>
+          {zones.map((z) => (
+            <option value={z.value} selected={z.value === timezone}>{z.value === z.label ? z.value : `${z.label} (${z.value})`}</option>
+          ))}
+        </select>
+        {errors.timezone && <p class="error" id="timezone-error">{errors.timezone}</p>}
+      </div>
+      <button class="btn btn-primary" type="submit">Guardar zona horaria</button>
+    </form>
+  </section>
+
+  <section class="panel">
+    <h2>Contraseña</h2>
+    <p class="hint-text">Al cambiarla cerramos tus otras sesiones abiertas; esta sigue activa.</p>
+    <form method="post" class="stack" novalidate>
+      <input type="hidden" name="_csrf" value={csrf} />
+      <input type="hidden" name="accion" value="contrasena" />
+      {errors.form && <p class="form-error" role="alert">{errors.form}</p>}
+      <div class="field">
+        <label for="current_password">Contraseña actual</label>
+        <input id="current_password" name="current_password" type="password" autocomplete="current-password" required maxlength={PASSWORD_MAX} aria-invalid={errors.current ? 'true' : undefined} aria-describedby={describedBy('current')} />
+        {errors.current && <p class="error" id="current-error">{errors.current}</p>}
+      </div>
+      <div class="field">
+        <label for="new_password">Contraseña nueva</label>
+        <input id="new_password" name="new_password" type="password" autocomplete="new-password" required minlength={PASSWORD_MIN} maxlength={PASSWORD_MAX} aria-invalid={errors.next ? 'true' : undefined} aria-describedby={describedBy('next', 'new-hint')} />
+        <p class="hint" id="new-hint">Al menos {PASSWORD_MIN} caracteres.</p>
+        {errors.next && <p class="error" id="next-error">{errors.next}</p>}
+      </div>
+      <div class="field">
+        <label for="confirm_password">Repite la contraseña nueva</label>
+        <input id="confirm_password" name="confirm_password" type="password" autocomplete="new-password" required maxlength={PASSWORD_MAX} aria-invalid={errors.confirm ? 'true' : undefined} aria-describedby={describedBy('confirm')} />
+        {errors.confirm && <p class="error" id="confirm-error">{errors.confirm}</p>}
+      </div>
+      <button class="btn btn-primary" type="submit">Cambiar contraseña</button>
+    </form>
+  </section>
+
+  <section class="panel">
+    <h2>Sesiones</h2>
+    <p class="hint-text">Si dejaste la sesión abierta en otro dispositivo, ciérrala desde aquí. También se cerrará en este.</p>
+    <form method="post">
+      <input type="hidden" name="_csrf" value={csrf} />
+      <input type="hidden" name="accion" value="cerrar-sesiones" />
+      <button class="btn btn-ghost" type="submit">Cerrar sesión en todos los dispositivos</button>
+    </form>
+  </section>
+
+  <footer class="credits">
+    <p>Diseñado con el sistema de Mateo Folador</p>
+  </footer>
+</App>
+
+<style>
+  h1 {
+    margin-bottom: var(--s-2);
+  }
+  .account {
+    margin: 0 0 var(--s-5);
+    color: var(--text-muted);
+    overflow-wrap: anywhere;
+  }
+  .panel {
+    max-width: 640px;
+    padding: var(--s-5);
+    margin-bottom: var(--s-5);
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--r-lg);
+    display: grid;
+    gap: var(--s-3);
+  }
+  .panel h2 {
+    margin: 0;
+  }
+  .hint-text {
+    margin: 0;
+    color: var(--text-muted);
+  }
+  .stack {
+    display: grid;
+    gap: var(--s-4);
+  }
+  .stack .btn,
+  .panel form .btn {
+    justify-self: start;
+  }
+  .form-error {
+    margin: 0;
+    color: var(--mf-warn-text);
+    font-weight: 500;
+  }
+  .credits {
+    max-width: 640px;
+    margin-top: var(--s-6);
+    font-size: 13px;
+    color: var(--text-muted);
+  }
+  .credits p {
+    margin: 0;
+  }
+</style>

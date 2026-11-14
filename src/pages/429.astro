@@ -1,0 +1,17 @@
+---
+// 429 genérico. Quien lo usa hace rewrite a /429?espera=N (o responde con su propio mensaje).
+import ErrorPage from '../components/ErrorPage.astro';
+import { tooManyMessage } from '../server/security/rate-limit.ts';
+
+const raw = Number(Astro.url.searchParams.get('espera'));
+const wait = Number.isInteger(raw) && raw > 0 && raw <= 86400 ? raw : 60;
+Astro.response.headers.set('Retry-After', String(wait));
+---
+
+<ErrorPage
+  status={429}
+  title="Demasiados intentos"
+  message={`${tooManyMessage(wait)} y vuelve a intentarlo. No se perdió nada.`}
+  actionHref="/"
+  actionLabel="Volver a la Biblioteca"
+/>
