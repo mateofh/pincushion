@@ -29,9 +29,9 @@ export default defineConfig({
     screenshot: 'only-on-failure',
   },
   projects: [
-    { name: 'escritorio', use: { ...devices['Desktop Chrome'], viewport: { width: 1280, height: 800 } }, grepInvert: /@solo-movil|@solo-sin-js/ },
-    { name: 'movil', use: { ...devices['Pixel 7'] }, grep: /@movil/ },
-    { name: 'sin-js', use: { ...devices['Desktop Chrome'], javaScriptEnabled: false }, grep: /@sin-js/ },
+    { name: 'escritorio', use: { ...devices['Desktop Chrome'], viewport: { width: 1280, height: 800 } }, grepInvert: process.env.NOCTURNO ? /@solo-movil|@solo-sin-js/ : /@solo-movil|@solo-sin-js|@nocturno/ },
+    { name: 'movil', use: { ...devices['Pixel 7'] }, grep: /@movil/, grepInvert: process.env.NOCTURNO ? undefined : /@nocturno/ },
+    { name: 'sin-js', use: { ...devices['Desktop Chrome'], javaScriptEnabled: false }, grep: /@sin-js/, grepInvert: /@nocturno/ },
   ],
   webServer: [
     {

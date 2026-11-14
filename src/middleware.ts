@@ -27,8 +27,9 @@ const PUBLIC_EXACT = new Set([
   '/404',
   '/429',
   '/500',
+  '/favicon.svg',
 ]);
-const PUBLIC_PREFIX = ['/_astro/', '/vendor/', '/favicon'];
+const PUBLIC_PREFIX = ['/_astro/', '/vendor/'];
 /** Rutas autenticadas por token propio (sin sesión ni CSRF de sesión). */
 const TOKEN_AUTH = new Set(['/bookmarklet/guardar']);
 /** Páginas con secretos o datos de la cuenta: nunca en caché. */
@@ -165,7 +166,10 @@ export const onRequest = defineMiddleware(async (ctx, next) => {
   }
 
   function forbidden(): Promise<Response> {
-    return ctx.rewrite(new Request(new URL('/403', ctx.url), { headers: ctx.request.headers }));
+    // Se conserva el request id para que el código de referencia de la página 403 coincida con X-Request-Id.
+    const headers = new Headers(ctx.request.headers);
+    headers.set('x-request-id', requestId);
+    return ctx.rewrite(new Request(new URL('/403', ctx.url), { headers }));
   }
 
   /** N5: guarda el formulario (sin _csrf ni contraseñas) cifrado en una cookie corta para reenviarlo tras entrar. */
