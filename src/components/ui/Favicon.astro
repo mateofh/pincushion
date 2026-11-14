@@ -1,0 +1,71 @@
+---
+// Favicon del dominio. Con favicon guardado: <img data-favicon="fetched"> servida en /favicons/:dominio.
+// Sin él: monograma (inicial del dominio) en un cuadrado con color derivado del dominio, data-favicon="fallback".
+// Si la imagen falla al cargar, un script la sustituye por el monograma.
+// Uso: <Favicon domain="example.com" hasFavicon={b.hasFavicon} size={20} />
+import { hueIndex, monogramLetter } from './format.ts';
+
+interface Props {
+  domain: string;
+  hasFavicon?: boolean;
+  size?: 16 | 20 | 32;
+}
+const { domain, hasFavicon = false, size = 20 } = Astro.props;
+const letter = monogramLetter(domain);
+const hue = hueIndex(domain);
+---
+
+{
+  hasFavicon ? (
+    <img class={`fav s${size}`} src={`/favicons/${encodeURIComponent(domain)}`} alt="" width={size} height={size} loading="lazy" decoding="async" data-favicon="fetched" data-letter={letter} data-hue={hue} />
+  ) : (
+    <span class={`fav mono-fav s${size} h${hue}`} data-favicon="fallback" aria-hidden="true">{letter}</span>
+  )
+}
+
+<style is:global>
+  .fav {
+    flex: none;
+    border-radius: 5px;
+    object-fit: cover;
+  }
+  .fav.s16 { width: 16px; height: 16px; font-size: 10px; border-radius: 4px; }
+  .fav.s20 { width: 20px; height: 20px; font-size: 12px; }
+  .fav.s32 { width: 32px; height: 32px; font-size: 18px; border-radius: 8px; }
+  .mono-fav {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-family: var(--mf-display);
+    font-weight: 800;
+    line-height: 1;
+    color: #fff;
+    user-select: none;
+  }
+  .mono-fav.h0 { background: #0b6bdb; }
+  .mono-fav.h1 { background: #0f7a50; }
+  .mono-fav.h2 { background: #7a3fb0; }
+  .mono-fav.h3 { background: #b8321f; }
+  .mono-fav.h4 { background: #1f6f8b; }
+  .mono-fav.h5 { background: #5a6473; }
+  .mono-fav.h6 { background: #8a6100; }
+  .mono-fav.h7 { background: #a1306b; }
+</style>
+
+<script>
+  // Si el favicon guardado no carga, se muestra el monograma.
+  document.addEventListener(
+    'error',
+    (e) => {
+      const img = e.target;
+      if (!(img instanceof HTMLImageElement) || img.dataset.favicon !== 'fetched') return;
+      const span = document.createElement('span');
+      span.className = img.className.replace(/\bfav\b/, 'fav mono-fav') + ` h${img.dataset.hue ?? 0}`;
+      span.dataset.favicon = 'fallback';
+      span.setAttribute('aria-hidden', 'true');
+      span.textContent = img.dataset.letter ?? '?';
+      img.replaceWith(span);
+    },
+    true,
+  );
+</script>

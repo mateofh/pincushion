@@ -1,0 +1,69 @@
+---
+// Botón pill de la marca. Con `href` renderiza un enlace; si no, un <button>.
+// Uso: <Button variant="primary" type="submit" icon="check">Guardar</Button>
+//      <Button href="/guardar" variant="secondary" size="lg">Guardar enlace</Button>
+// `busy` marca aria-busy (HTMX/pendiente) sin deshabilitar para no perder el foco.
+import Icon, { type IconName } from './Icon.astro';
+
+interface Props {
+  variant?: 'primary' | 'secondary' | 'ghost' | 'ghost-light' | 'danger';
+  size?: 'sm' | 'md' | 'lg';
+  href?: string;
+  type?: 'button' | 'submit' | 'reset';
+  /** id del formulario al que pertenece (atributo `form`). */
+  form?: string;
+  name?: string;
+  value?: string;
+  formaction?: string;
+  icon?: IconName;
+  /** Icono a la derecha del texto. */
+  iconEnd?: IconName;
+  busy?: boolean;
+  disabled?: boolean;
+  id?: string;
+  target?: string;
+  rel?: string;
+  class?: string;
+  'aria-label'?: string;
+  /** Atributos data-* (p. ej. data-sort-apply). */
+  [attr: `data-${string}`]: string | boolean | undefined;
+}
+const {
+  variant = 'primary',
+  size = 'md',
+  href,
+  type = 'button',
+  form,
+  name,
+  value,
+  formaction,
+  icon,
+  iconEnd,
+  busy = false,
+  disabled = false,
+  id,
+  target,
+  rel,
+  class: className,
+  'aria-label': ariaLabel,
+  ...rest
+} = Astro.props;
+const cls = ['btn', `btn-${variant}`, size !== 'md' && `btn-${size}`, className];
+const iconSize = size === 'sm' ? 16 : 18;
+---
+
+{
+  href ? (
+    <a class:list={cls} href={href} id={id} target={target} rel={rel ?? (target === '_blank' ? 'noopener noreferrer' : undefined)} aria-label={ariaLabel} aria-busy={busy ? 'true' : undefined} aria-disabled={disabled ? 'true' : undefined} {...rest}>
+      {icon && <Icon name={icon} size={iconSize} />}
+      <slot />
+      {iconEnd && <Icon name={iconEnd} size={iconSize} />}
+    </a>
+  ) : (
+    <button class:list={cls} type={type} id={id} form={form} name={name} value={value} formaction={formaction} disabled={disabled} aria-label={ariaLabel} aria-busy={busy ? 'true' : undefined} {...rest}>
+      {icon && <Icon name={icon} size={iconSize} />}
+      <slot />
+      {iconEnd && <Icon name={iconEnd} size={iconSize} />}
+    </button>
+  )
+}

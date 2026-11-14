@@ -1,0 +1,63 @@
+---
+// En < 720 px la barra lateral pasa a un <details> "Filtros" (a modo de hoja). A partir de 720 px
+// esta pieza se oculta y se ve <Sidebar>. Recibe las mismas props que Sidebar.
+// Uso: <Sidebar {...filters} /> y <MobileFilters {...filters} />
+import Icon from './Icon.astro';
+import Sidebar from './Sidebar.astro';
+
+type SidebarProps = Parameters<typeof Sidebar>[0];
+type Props = Omit<SidebarProps, 'inSheet'> & { open?: boolean };
+const { open = false, ...rest } = Astro.props;
+---
+
+<details class="mf" open={open}>
+  <summary>
+    <Icon name="menu" size={18} />
+    <span>Filtros</span>
+    <Icon name="chevron-down" size={18} class="chev" />
+  </summary>
+  <div class="sheet"><Sidebar {...rest} inSheet /></div>
+</details>
+
+<style>
+  .mf {
+    background: var(--mf-ink-900);
+    border: 1px solid var(--chrome-border);
+    border-radius: var(--r-lg);
+    color: var(--chrome-text);
+  }
+  @media (min-width: 721px) {
+    .mf {
+      display: none;
+    }
+  }
+  summary {
+    display: flex;
+    align-items: center;
+    gap: var(--s-3);
+    min-height: var(--tap);
+    padding: 0 var(--s-4);
+    cursor: pointer;
+    font-weight: 700;
+    list-style: none;
+    border-radius: var(--r-lg);
+  }
+  summary::-webkit-details-marker {
+    display: none;
+  }
+  summary span {
+    flex: 1;
+  }
+  summary:focus-visible {
+    box-shadow: 0 0 0 3px var(--mf-ink-950), 0 0 0 5px var(--mf-blue-bright);
+  }
+  .mf[open] :global(.chev) {
+    transform: rotate(180deg);
+  }
+  .sheet {
+    max-height: 70vh;
+    overflow-y: auto;
+    padding: 0 var(--s-2) var(--s-3);
+    border-top: 1px solid var(--chrome-border);
+  }
+</style>

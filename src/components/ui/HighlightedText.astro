@@ -1,0 +1,13 @@
+---
+// Texto con coincidencias resaltadas. Recibe HTML YA ESCAPADO por highlightToHtml() (única
+// excepción permitida al uso de set:html). Nunca le pases texto de usuario sin escapar.
+// Uso: <HighlightedText html={hit.titleHtml} />
+interface Props {
+  html: string;
+  as?: 'span' | 'p' | 'div';
+  class?: string;
+}
+const { html, as: Tag = 'span', class: className } = Astro.props;
+---
+
+<Tag class={className} set:html={html} />

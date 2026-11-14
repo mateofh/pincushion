@@ -1,0 +1,89 @@
+---
+// Colección y etiquetas de un enlace como chips enlazados a la Biblioteca filtrada.
+// Uso: <TagChips tags={b.tags} collection={b.collection} />
+import Icon from './Icon.astro';
+import { tagKey } from '../../domain/tags.ts';
+import type { TagRef, CollectionRef } from '../../server/contracts.ts';
+
+interface Props {
+  tags: TagRef[];
+  collection?: CollectionRef | null;
+}
+const { tags, collection = null } = Astro.props;
+---
+
+{
+  (tags.length > 0 || collection) && (
+    <ul class="chips" aria-label="Colección y etiquetas">
+      {collection && (
+        <li>
+          <a class="chip chip-col" href={`/?coleccion=${collection.id}`}>
+            <span><Icon name="folder" size={14} />{collection.name}</span>
+          </a>
+        </li>
+      )}
+      {tags.map((t) => (
+        <li>
+          <a class="chip" href={`/?etiqueta=${encodeURIComponent(tagKey(t.name))}`}>
+            <span>{t.name}</span>
+          </a>
+        </li>
+      ))}
+    </ul>
+  )
+}
+
+<style>
+  .chips {
+    display: flex;
+    flex-wrap: wrap;
+    column-gap: var(--s-1);
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    min-width: 0;
+  }
+  .chips li {
+    min-width: 0;
+    max-width: 100%;
+    display: flex;
+  }
+  /* Objetivo táctil de 44 px; el "pill" visible es el span interior. */
+  .chip {
+    display: inline-flex;
+    align-items: center;
+    min-height: var(--tap);
+    min-width: var(--tap);
+    max-width: 100%;
+    text-decoration: none;
+    color: var(--mf-graphite-2);
+  }
+  .chip span {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    min-height: 28px;
+    max-width: 100%;
+    padding: 0 12px;
+    border-radius: var(--r-pill);
+    background: var(--mf-paper);
+    border: 1px solid var(--mf-paper-grid);
+    font: 600 12px/1.2 var(--mf-text);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .chip-col span {
+    background: rgba(31, 139, 255, 0.1);
+    border-color: transparent;
+    color: var(--mf-blue-deep);
+  }
+  .chip:hover span {
+    border-color: var(--mf-graphite-3);
+  }
+  @media (min-width: 721px) and (pointer: fine) {
+    .chip {
+      min-height: 32px;
+    }
+  }
+</style>

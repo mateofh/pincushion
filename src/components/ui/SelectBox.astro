@@ -1,0 +1,65 @@
+---
+// Casilla de selección de un enlace para el formulario de lote (#bulk). El input mide 44×44.
+// Uso: <SelectBox id={b.id} title={b.title} />
+interface Props {
+  id: number;
+  title: string;
+  /** id del formulario de lote (por defecto "bulk"). */
+  form?: string;
+}
+const { id, title, form = 'bulk' } = Astro.props;
+---
+
+<label class="sel">
+  <input type="checkbox" name="ids" value={id} form={form} />
+  <span class="visually-hidden">Seleccionar «{title}»</span>
+</label>
+
+<style>
+  .sel {
+    display: inline-flex;
+    margin-left: -10px;
+  }
+  input {
+    appearance: none;
+    -webkit-appearance: none;
+    position: relative;
+    width: var(--tap);
+    height: var(--tap);
+    margin: 0;
+    cursor: pointer;
+    background: transparent;
+    border-radius: var(--r-md);
+  }
+  input::before {
+    content: '';
+    position: absolute;
+    inset: 11px;
+    border: 2px solid var(--mf-graphite-3);
+    border-radius: 6px;
+    background: var(--surface);
+    transition: background 0.12s ease, border-color 0.12s ease;
+  }
+  input:hover::before {
+    border-color: var(--mf-graphite);
+  }
+  input:checked::before {
+    background: var(--mf-blue-600);
+    border-color: var(--mf-blue-600);
+  }
+  input::after {
+    content: '';
+    position: absolute;
+    left: 17px;
+    top: 14px;
+    width: 6px;
+    height: 12px;
+    border: solid #fff;
+    border-width: 0 2.5px 2.5px 0;
+    transform: rotate(45deg) scale(0);
+    transition: transform 0.12s ease;
+  }
+  input:checked::after {
+    transform: rotate(45deg) scale(1);
+  }
+</style>

@@ -1,0 +1,170 @@
+---
+// Barra de acciones del formulario de lote. Es el <form id="bulk">: las casillas de los enlaces
+// (SelectBox) se asocian a él con form="bulk". Acciones (campo `accion`):
+//   etiquetar (+ `etiqueta`), mover (+ `coleccion`: id o "" = Sin colección), favorito, papelera.
+// Sin JS: barra estática. Con JS: contador "N seleccionados"; en móvil se fija abajo (por encima
+// del botón "Guardar enlace" del layout) y solo aparece con selección.
+// Uso: <BulkBar csrf={csrf} volver="/?vista=lista" collections={cols} />
+import Button from './Button.astro';
+import Select from './Select.astro';
+import Icon from './Icon.astro';
+import type { CollectionRef } from '../../server/contracts.ts';
+
+interface Props {
+  csrf: string;
+  volver: string;
+  collections: CollectionRef[];
+  action?: string;
+  /** Mensaje de error de validación ("Selecciona al menos un enlace"). */
+  error?: string;
+}
+const { csrf, volver, collections, action = '/enlaces/lote', error } = Astro.props;
+const options = [{ value: '', label: 'Sin colección' }, ...collections.map((c) => ({ value: String(c.id), label: c.name }))];
+---
+
+<form id="bulk" class="bulk" method="post" action={action} aria-label="Acciones sobre los enlaces seleccionados" data-bulk-bar data-count="0">
+  <input type="hidden" name="_csrf" value={csrf} />
+  <input type="hidden" name="volver" value={volver} />
+  <p class="count" role="status" aria-live="polite" data-bulk-count>
+    <span class="static-hint">Marca los enlaces con su casilla y elige una acción.</span>
+  </p>
+  {error && <p class="err" role="alert"><Icon name="alert" size={16} />{error}</p>}
+  <div class="tools">
+    <div class="grp">
+      <label class="visually-hidden" for="bulk-etiqueta">Etiqueta para añadir</label>
+      <input id="bulk-etiqueta" name="etiqueta" type="text" placeholder="Etiqueta" maxlength="40" autocomplete="off" />
+      <Button variant="ghost" size="sm" type="submit" name="accion" value="etiquetar" icon="tag">Añadir etiqueta</Button>
+    </div>
+    <div class="grp">
+      <Select id="bulk-coleccion" name="coleccion" label="Colección de destino" options={options} hideLabel />
+      <Button variant="ghost" size="sm" type="submit" name="accion" value="mover" icon="folder">Mover a…</Button>
+    </div>
+    <Button variant="ghost" size="sm" type="submit" name="accion" value="favorito" icon="star">Favorito</Button>
+    <Button variant="ghost" size="sm" type="submit" name="accion" value="papelera" icon="trash" class="trash">Mover a la papelera</Button>
+  </div>
+</form>
+
+<style>
+  .bulk {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--s-2) var(--s-4);
+    padding: var(--s-2) var(--s-4);
+    margin-bottom: var(--s-4);
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--r-lg);
+  }
+  .count {
+    margin: 0;
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--text-2);
+  }
+  .err {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin: 0;
+    color: var(--mf-warn-text);
+    font-weight: 600;
+    font-size: 14px;
+  }
+  .tools {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--s-2);
+    margin-left: auto;
+  }
+  .grp {
+    display: flex;
+    align-items: center;
+    gap: var(--s-2);
+  }
+  .grp input {
+    width: 140px;
+    min-height: 36px;
+    padding: 0 12px;
+    font: 400 14px var(--mf-text);
+    color: var(--text);
+    background: var(--surface);
+    border: 1.5px solid var(--border);
+    border-radius: var(--r-pill);
+  }
+  .grp :global(.field select) {
+    min-height: 36px;
+    padding: 0 36px 0 12px;
+    width: auto;
+    max-width: 160px;
+    font-size: 14px;
+    border-radius: var(--r-pill);
+    background-position: right 10px center;
+  }
+  .bulk :global(.trash) {
+    color: var(--mf-warn-text);
+    border-color: var(--mf-warn-text);
+  }
+  .bulk :global(.trash:hover) {
+    background: var(--mf-warn-text);
+    color: #fff;
+  }
+  @media (pointer: coarse), (max-width: 720px) {
+    .grp input,
+    .grp :global(.field select) {
+      min-height: var(--tap);
+    }
+  }
+
+  /* Mejorada con JS: contador y, en móvil, barra fija solo con selección. */
+  .bulk[data-enhanced] .static-hint {
+    display: none;
+  }
+  @media (max-width: 720px) {
+    .bulk[data-enhanced] {
+      position: fixed;
+      left: var(--s-3);
+      right: var(--s-3);
+      /* por encima del botón "Guardar enlace" del layout (52 px + 16 px + aire) */
+      bottom: calc(var(--s-4) + 52px + var(--s-3) + env(safe-area-inset-bottom));
+      z-index: 15;
+      margin: 0;
+      flex-direction: column;
+      align-items: stretch;
+      box-shadow: var(--shadow-deep);
+    }
+    .bulk[data-enhanced][data-count='0'] {
+      display: none;
+    }
+    .bulk[data-enhanced] .tools {
+      flex-wrap: nowrap;
+      overflow-x: auto;
+      margin-left: 0;
+      padding-bottom: var(--s-1);
+    }
+    .bulk[data-enhanced] .tools > :global(*),
+    .bulk[data-enhanced] .grp {
+      flex: none;
+    }
+  }
+</style>
+
+<script>
+  const bar = document.querySelector<HTMLFormElement>('[data-bulk-bar]');
+  const out = bar?.querySelector<HTMLElement>('[data-bulk-count]');
+  if (bar && out) {
+    bar.dataset.enhanced = 'true';
+    const boxes = () => Array.from(document.querySelectorAll<HTMLInputElement>('input[type="checkbox"][form="bulk"]'));
+    const update = () => {
+      const n = boxes().filter((b) => b.checked).length;
+      bar.dataset.count = String(n);
+      out.textContent = n === 0 ? 'Ningún enlace seleccionado' : n === 1 ? '1 seleccionado' : `${n} seleccionados`;
+    };
+    document.addEventListener('change', (e) => {
+      const t = e.target;
+      if (t instanceof HTMLInputElement && t.type === 'checkbox' && t.getAttribute('form') === 'bulk') update();
+    });
+    update();
+  }
+</script>

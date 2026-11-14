@@ -1,0 +1,62 @@
+---
+// Acciones de un enlace: favorito (formulario POST con valor explícito) y editar.
+// Uso: <BookmarkActions id={b.id} title={b.title} isFavorite={b.isFavorite} csrf={csrf} volver="/?vista=lista" />
+import Icon from './Icon.astro';
+
+interface Props {
+  id: number;
+  title: string;
+  isFavorite: boolean;
+  csrf: string;
+  /** Ruta a la que volver tras la acción (PRG). */
+  volver: string;
+}
+const { id, title, isFavorite, csrf, volver } = Astro.props;
+const favLabel = isFavorite ? 'Quitar de favoritos' : 'Marcar como favorito';
+---
+
+<div class="acts">
+  <form method="post" action={`/enlaces/${id}/favorito`}>
+    <input type="hidden" name="_csrf" value={csrf} />
+    <input type="hidden" name="volver" value={volver} />
+    <input type="hidden" name="value" value={isFavorite ? '0' : '1'} />
+    <button class="act fav" type="submit" aria-pressed={isFavorite ? 'true' : 'false'} title={favLabel}>
+      <Icon name={isFavorite ? 'star-filled' : 'star'} />
+      <span class="visually-hidden">{favLabel}</span>
+    </button>
+  </form>
+  <a class="act" href={`/enlaces/${id}`} title="Editar" aria-label={`Editar «${title}»`}>
+    <Icon name="edit" />
+  </a>
+</div>
+
+<style>
+  .acts {
+    display: flex;
+    align-items: center;
+    gap: 2px;
+  }
+  form {
+    margin: 0;
+  }
+  .act {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: var(--tap);
+    height: var(--tap);
+    border-radius: var(--r-pill);
+    border: 0;
+    background: transparent;
+    color: var(--mf-graphite-3);
+    cursor: pointer;
+    text-decoration: none;
+  }
+  .act:hover {
+    background: var(--border);
+    color: var(--text);
+  }
+  .fav[aria-pressed='true'] {
+    color: var(--mf-gold-text);
+  }
+</style>

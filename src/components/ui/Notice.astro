@@ -1,0 +1,74 @@
+---
+// Aviso con icono + texto (nunca solo color). info/success usan role="status"; warn/error, role="alert".
+// Uso: <Notice variant="error" title="No se pudo guardar">Revisa la URL.</Notice>
+import Icon, { type IconName } from './Icon.astro';
+
+interface Props {
+  variant?: 'info' | 'success' | 'warn' | 'error';
+  title?: string;
+  class?: string;
+}
+const { variant = 'info', title, class: className } = Astro.props;
+const ICON: Record<string, IconName> = { info: 'info', success: 'check', warn: 'alert', error: 'alert' };
+const ROLE = variant === 'warn' || variant === 'error' ? 'alert' : 'status';
+---
+
+<div class:list={['notice', `notice-${variant}`, className]} role={ROLE}>
+  <Icon name={ICON[variant]!} size={20} />
+  <div class="body">
+    {title && <p class="title">{title}</p>}
+    <div class="text"><slot /></div>
+  </div>
+</div>
+
+<style>
+  .notice {
+    display: flex;
+    gap: var(--s-3);
+    align-items: flex-start;
+    padding: var(--s-3) var(--s-4);
+    border-radius: var(--r-md);
+    border: 1px solid var(--border);
+    border-left-width: 4px;
+    background: var(--surface);
+    box-shadow: var(--shadow-soft);
+  }
+  .body {
+    min-width: 0;
+    overflow-wrap: anywhere;
+  }
+  .title {
+    margin: 0;
+    font-weight: 700;
+  }
+  .text {
+    color: var(--text-2);
+  }
+  .text :global(p) {
+    margin: 0;
+  }
+  .notice-info {
+    border-left-color: var(--accent);
+  }
+  .notice-info > :global(.icon) {
+    color: var(--accent);
+  }
+  .notice-success {
+    border-left-color: var(--mf-success-text);
+  }
+  .notice-success > :global(.icon) {
+    color: var(--mf-success-text);
+  }
+  .notice-warn {
+    border-left-color: var(--mf-gold-text);
+  }
+  .notice-warn > :global(.icon) {
+    color: var(--mf-gold-text);
+  }
+  .notice-error {
+    border-left-color: var(--mf-warn-text);
+  }
+  .notice-error > :global(.icon) {
+    color: var(--mf-warn-text);
+  }
+</style>

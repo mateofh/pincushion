@@ -1,0 +1,32 @@
+---
+// Contenedor de enlaces: región con nombre ("Enlaces guardados" / "Resultados") que dispone los
+// hijos como rejilla de tarjetas o como lista, según `view`. Úsalo con BookmarkCard / BookmarkRow.
+// Uso: <BookmarkList view="tarjetas">{items.map((b) => <BookmarkCard … />)}</BookmarkList>
+interface Props {
+  view?: 'tarjetas' | 'lista';
+  label?: string;
+}
+const { view = 'tarjetas', label = 'Enlaces guardados' } = Astro.props;
+---
+
+<section class:list={['bl', view]} aria-label={label}>
+  <slot />
+</section>
+
+<style>
+  .tarjetas {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(min(100%, 280px), 1fr));
+    gap: var(--s-4);
+  }
+  .lista {
+    border: 1px solid var(--border);
+    border-bottom: 0;
+    border-radius: var(--r-lg);
+    overflow: hidden;
+    box-shadow: var(--shadow-soft);
+  }
+  .bl > :global(*) {
+    min-width: 0;
+  }
+</style>

@@ -1,0 +1,71 @@
+---
+// Botón solo con icono. `label` es obligatorio: es el nombre accesible y el tooltip.
+// Uso: <IconButton label="Copiar código" icon="copy" type="button" />
+import Icon, { type IconName } from './Icon.astro';
+
+interface Props {
+  label: string;
+  icon: IconName;
+  href?: string;
+  type?: 'button' | 'submit' | 'reset';
+  form?: string;
+  name?: string;
+  value?: string;
+  /** Estado de alternancia (aria-pressed). */
+  pressed?: boolean;
+  variant?: 'plain' | 'filled';
+  busy?: boolean;
+  class?: string;
+  id?: string;
+}
+const { label, icon, href, type = 'button', form, name, value, pressed, variant = 'plain', busy = false, class: className, id } = Astro.props;
+---
+
+{
+  href ? (
+    <a class:list={['icon-btn', variant, className]} href={href} id={id} title={label}>
+      <Icon name={icon} />
+      <span class="visually-hidden">{label}</span>
+    </a>
+  ) : (
+    <button class:list={['icon-btn', variant, className]} type={type} id={id} form={form} name={name} value={value} title={label} aria-pressed={pressed === undefined ? undefined : pressed ? 'true' : 'false'} aria-busy={busy ? 'true' : undefined}>
+      <Icon name={icon} />
+      <span class="visually-hidden">{label}</span>
+    </button>
+  )
+}
+
+<style>
+  .icon-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: var(--tap);
+    height: var(--tap);
+    border-radius: var(--r-pill);
+    border: 0;
+    background: transparent;
+    color: var(--text-2);
+    cursor: pointer;
+    text-decoration: none;
+    transition: background 0.15s ease, color 0.15s ease;
+  }
+  .icon-btn:hover {
+    background: var(--border);
+    color: var(--text);
+  }
+  .icon-btn.filled {
+    background: var(--mf-graphite);
+    color: #fff;
+  }
+  .icon-btn.filled:hover {
+    background: var(--mf-ink-800);
+  }
+  .icon-btn[aria-pressed='true'] {
+    color: var(--mf-gold-text);
+  }
+  .icon-btn[aria-busy='true'] {
+    cursor: progress;
+    opacity: 0.7;
+  }
+</style>

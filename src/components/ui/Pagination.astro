@@ -1,0 +1,39 @@
+---
+// Paginación por cursor. Pasa solo los enlaces que existen (el cursor ya va en la URL).
+// Uso: <Pagination olderHref={`/?cursor=${page.nextCursor}`} newerHref={undefined} />
+import Icon from './Icon.astro';
+
+interface Props {
+  /** Enlace a la página de enlaces más antiguos (siguiente cursor). */
+  olderHref?: string;
+  /** Enlace a la página de enlaces más recientes. */
+  newerHref?: string;
+}
+const { olderHref, newerHref } = Astro.props;
+---
+
+{
+  (olderHref || newerHref) && (
+    <nav class="pager" aria-label="Paginación">
+      {newerHref ? (
+        <a class="btn btn-ghost" href={newerHref} rel="prev"><Icon name="arrow-right" class="flip" size={18} />Más recientes</a>
+      ) : <span />}
+      {olderHref && (
+        <a class="btn btn-ghost" href={olderHref} rel="next">Más antiguos<Icon name="arrow-right" size={18} /></a>
+      )}
+    </nav>
+  )
+}
+
+<style>
+  .pager {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: space-between;
+    gap: var(--s-3);
+    margin-top: var(--s-5);
+  }
+  .pager :global(.flip) {
+    transform: scaleX(-1);
+  }
+</style>

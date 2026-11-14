@@ -1,0 +1,223 @@
+---
+// Etiquetas. Sin JavaScript: campo de texto separado por comas con sugerencias (datalist).
+// Con JavaScript: chips eliminables (teclado: Enter/coma añaden, Retroceso quita la última,
+// cada chip tiene su botón "Quitar etiqueta «x»") y un campo oculto con el mismo `name` que
+// lleva el valor real "a, b, c" para el formulario.
+// Uso: <TagInput id="etiquetas" name="etiquetas" label="Etiquetas" value="cocina, pan" suggestions={['cocina','lectura']} />
+import Icon from './Icon.astro';
+
+interface Props {
+  id: string;
+  name: string;
+  label: string;
+  value?: string;
+  suggestions?: string[];
+  hint?: string;
+  error?: string;
+  class?: string;
+}
+const { id, name, label, value = '', suggestions = [], hint = 'Sepáralas con comas.', error, class: className } = Astro.props;
+const describedby = [hint && `${id}-hint`, error && `${id}-error`].filter(Boolean).join(' ') || undefined;
+---
+
+<div class:list={['field tag-input', className]} data-tag-input>
+  <label for={id}>{label}</label>
+  <div class="tag-box">
+    <ul class="tag-chips" data-chips aria-label="Etiquetas añadidas" hidden></ul>
+    <input id={id} name={name} type="text" value={value} list={suggestions.length ? `${id}-sugerencias` : undefined} autocomplete="off" autocapitalize="off" spellcheck="false" aria-invalid={error ? 'true' : undefined} aria-describedby={describedby} data-tag-field />
+  </div>
+  {suggestions.length > 0 && <datalist id={`${id}-sugerencias`}>{suggestions.map((s) => <option value={s} />)}</datalist>}
+  {hint && <p class="hint" id={`${id}-hint`}>{hint}</p>}
+  {error && <p class="error" id={`${id}-error`}><Icon name="alert" size={16} /><span>{error}</span></p>}
+  <p class="visually-hidden" role="status" aria-live="polite" data-live></p>
+</div>
+
+<style>
+  p {
+    margin: 0;
+  }
+  .tag-box {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--s-2);
+  }
+  .tag-box:has(.tag-chips:not([hidden])) {
+    padding: 4px 8px;
+    background: var(--surface);
+    border: 1.5px solid var(--border);
+    border-radius: var(--r-md);
+  }
+  .tag-box:has(.tag-chips:not([hidden])):focus-within {
+    border-color: var(--mf-blue);
+    box-shadow: var(--focus-ring);
+  }
+  .tag-chips {
+    display: contents;
+    list-style: none;
+    margin: 0;
+    padding: 0;
+  }
+  .tag-chips[hidden] {
+    display: none;
+  }
+  .tag-box:has(.tag-chips:not([hidden])) input {
+    flex: 1;
+    min-width: 8ch;
+    border: 0;
+    padding-left: 4px;
+    background: transparent;
+  }
+  .tag-box:has(.tag-chips:not([hidden])) input:focus-visible {
+    box-shadow: none;
+  }
+  .tag-box input {
+    flex: 1 1 8ch;
+  }
+</style>
+
+<style is:global>
+  /* Los chips los crea el script: estilos globales acotados a [data-tag-input]. */
+  [data-tag-input] .tag-chip {
+    display: inline-flex;
+    align-items: center;
+    min-height: var(--tap);
+    padding-left: 12px;
+    border-radius: var(--r-pill);
+    background: var(--mf-paper);
+    border: 1px solid var(--mf-paper-grid);
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--mf-graphite-2);
+  }
+  [data-tag-input] .tag-chip span {
+    overflow-wrap: anywhere;
+  }
+  [data-tag-input] .tag-chip button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex: none;
+    width: var(--tap);
+    height: var(--tap);
+    margin-left: 2px;
+    border: 0;
+    background: none;
+    color: var(--mf-graphite-3);
+    cursor: pointer;
+    border-radius: var(--r-pill);
+  }
+  [data-tag-input] .tag-chip button:hover {
+    color: var(--mf-warn-text);
+  }
+</style>
+
+<script>
+  // Mejora progresiva: sin este script el campo sigue siendo texto separado por comas.
+  const X_PATH = 'M6 6l12 12M18 6L6 18';
+
+  function parse(text: string): string[] {
+    return text.split(',').map((t) => t.replace(/\s+/g, ' ').trim()).filter(Boolean);
+  }
+
+  function setup(root: HTMLElement) {
+    const input = root.querySelector<HTMLInputElement>('[data-tag-field]');
+    const list = root.querySelector<HTMLUListElement>('[data-chips]');
+    const live = root.querySelector<HTMLElement>('[data-live]');
+    if (!input || !list || !live) return;
+    const name = input.name;
+    const form = input.form;
+    const hidden = document.createElement('input');
+    hidden.type = 'hidden';
+    hidden.name = name;
+    input.removeAttribute('name');
+    root.appendChild(hidden);
+    list.hidden = false;
+
+    let tags: string[] = [];
+    const keyOf = (t: string) => t.toLocaleLowerCase('es');
+
+    const sync = () => {
+      const pending = parse(input.value);
+      hidden.value = [...tags, ...pending].join(', ');
+    };
+    const render = () => {
+      list.replaceChildren();
+      for (const t of tags) {
+        const li = document.createElement('li');
+        li.className = 'tag-chip';
+        const span = document.createElement('span');
+        span.textContent = t;
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.setAttribute('aria-label', `Quitar etiqueta «${t}»`);
+        const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+        svg.setAttribute('viewBox', '0 0 24 24');
+        svg.setAttribute('width', '16');
+        svg.setAttribute('height', '16');
+        svg.setAttribute('fill', 'none');
+        svg.setAttribute('stroke', 'currentColor');
+        svg.setAttribute('stroke-width', '2');
+        svg.setAttribute('stroke-linecap', 'round');
+        svg.setAttribute('aria-hidden', 'true');
+        const p = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+        p.setAttribute('d', X_PATH);
+        svg.appendChild(p);
+        btn.appendChild(svg);
+        btn.addEventListener('click', () => {
+          tags = tags.filter((x) => x !== t);
+          render();
+          sync();
+          live.textContent = `Etiqueta «${t}» quitada`;
+          input.focus();
+        });
+        li.append(span, btn);
+        list.appendChild(li);
+      }
+    };
+    const commit = (text: string) => {
+      for (const t of parse(text)) if (!tags.some((x) => keyOf(x) === keyOf(t))) tags.push(t);
+      render();
+    };
+
+    commit(input.value);
+    input.value = '';
+    sync();
+
+    input.addEventListener('input', () => {
+      if (input.value.includes(',')) {
+        const parts = input.value.split(',');
+        const rest = parts.pop() ?? '';
+        commit(parts.join(','));
+        input.value = rest.replace(/^\s+/, '');
+      }
+      sync();
+    });
+    input.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' && input.value.trim()) {
+        e.preventDefault();
+        const t = input.value.trim();
+        commit(t);
+        input.value = '';
+        sync();
+        live.textContent = `Etiqueta «${t}» añadida`;
+      } else if (e.key === 'Backspace' && !input.value && tags.length) {
+        const last = tags[tags.length - 1]!;
+        tags.pop();
+        render();
+        sync();
+        live.textContent = `Etiqueta «${last}» quitada`;
+      }
+    });
+    input.addEventListener('blur', () => {
+      if (input.value.trim()) {
+        commit(input.value);
+        input.value = '';
+        sync();
+      }
+    });
+    form?.addEventListener('submit', sync);
+  }
+
+  document.querySelectorAll<HTMLElement>('[data-tag-input]').forEach(setup);
+</script>

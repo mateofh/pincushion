@@ -1,0 +1,29 @@
+---
+// Barra de herramientas de la lista: título/contador a la izquierda (slot por defecto) y
+// controles (ViewToggle, SortSelect…) a la derecha (slot "controls").
+// Uso: <Toolbar><p>42 enlaces</p><Fragment slot="controls"><ViewToggle … /><SortSelect … /></Fragment></Toolbar>
+---
+
+<div class="tb">
+  <div class="lead"><slot /></div>
+  <div class="controls"><slot name="controls" /></div>
+</div>
+
+<style>
+  .tb {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--s-3) var(--s-4);
+  }
+  .lead {
+    min-width: 0;
+  }
+  .controls {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--s-3);
+  }
+</style>

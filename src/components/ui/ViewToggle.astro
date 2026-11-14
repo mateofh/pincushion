@@ -1,0 +1,57 @@
+---
+// Grupo "Vista": Tarjetas / Lista como enlaces (funciona sin JS), con aria-current en la activa.
+// Uso: <ViewToggle view="tarjetas" hrefs={{ tarjetas: '/?vista=tarjetas', lista: '/?vista=lista' }} />
+import Icon from './Icon.astro';
+
+interface Props {
+  view: 'tarjetas' | 'lista';
+  hrefs: { tarjetas: string; lista: string };
+}
+const { view, hrefs } = Astro.props;
+---
+
+<div class="vt" role="group" aria-label="Vista">
+  <a href={hrefs.tarjetas} aria-current={view === 'tarjetas' ? 'true' : undefined}><Icon name="grid" size={18} /><span>Tarjetas</span></a>
+  <a href={hrefs.lista} aria-current={view === 'lista' ? 'true' : undefined}><Icon name="list" size={18} /><span>Lista</span></a>
+</div>
+
+<style>
+  .vt {
+    display: inline-flex;
+    padding: 3px;
+    gap: 2px;
+    background: var(--surface);
+    border: 1.5px solid var(--border);
+    border-radius: var(--r-pill);
+  }
+  a {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--s-2);
+    min-height: 38px;
+    padding: 0 var(--s-4);
+    border-radius: var(--r-pill);
+    color: var(--text-2);
+    text-decoration: none;
+    font-size: 14px;
+    font-weight: 600;
+  }
+  a:hover {
+    background: var(--border);
+    color: var(--text);
+  }
+  a[aria-current='true'] {
+    background: var(--mf-graphite);
+    color: #fff;
+  }
+  @media (pointer: coarse), (max-width: 720px) {
+    a {
+      min-height: var(--tap);
+      min-width: var(--tap);
+      justify-content: center;
+    }
+    .vt {
+      padding: 2px;
+    }
+  }
+</style>

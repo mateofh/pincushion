@@ -1,0 +1,57 @@
+---
+// Badge pill de 28 px. Siempre lleva texto (nunca solo el punto de color); el icono es opcional.
+// Uso: <Badge variant="success" icon="check">Datos obtenidos</Badge>
+import Icon, { type IconName } from './Icon.astro';
+
+interface Props {
+  variant?: 'blue' | 'dark' | 'light' | 'success' | 'warn' | 'gold';
+  icon?: IconName;
+  class?: string;
+}
+const { variant = 'light', icon, class: className } = Astro.props;
+---
+
+<span class:list={['badge', `badge-${variant}`, className]}>
+  {icon && <Icon name={icon} size={14} />}
+  <slot />
+</span>
+
+<style>
+  .badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    min-height: 28px;
+    padding: 2px 12px;
+    border-radius: var(--r-pill);
+    font: 600 12px/1.2 var(--mf-text);
+    letter-spacing: 0.01em;
+    max-width: 100%;
+  }
+  /* Variantes a11y: texto oscuro sobre fondo suave (≥ 4,5:1). */
+  .badge-blue {
+    background: rgba(31, 139, 255, 0.12);
+    color: var(--mf-blue-deep);
+  }
+  .badge-dark {
+    background: var(--mf-graphite);
+    color: #fff;
+  }
+  .badge-light {
+    background: var(--mf-paper);
+    color: var(--mf-graphite-2);
+    border: 1px solid var(--mf-paper-grid);
+  }
+  .badge-success {
+    background: rgba(46, 204, 139, 0.12);
+    color: #0b6a43;
+  }
+  .badge-warn {
+    background: rgba(255, 107, 87, 0.14);
+    color: var(--mf-warn-text);
+  }
+  .badge-gold {
+    background: rgba(245, 194, 74, 0.25);
+    color: var(--mf-gold-text);
+  }
+</style>
