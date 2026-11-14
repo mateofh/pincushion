@@ -3,6 +3,10 @@ import { test as base, expect, type Page } from '@playwright/test';
 import { randomUUID } from 'node:crypto';
 import { openDb, type Db } from '../../../src/server/db/sqlite.ts';
 import { hashPassword } from '../../../src/server/crypto.ts';
+import { createApp, type App } from '../../../src/server/context.ts';
+import { createFakeFetcher } from '../../../src/server/adapters/fake-fetcher.ts';
+import { bookmarkService } from '../../../src/server/services/bookmarks.ts';
+import type { Bookmark, SaveInput } from '../../../src/server/contracts.ts';
 
 export const APP_URL = process.env.E2E_APP_URL!;
 export const SITE_URL = process.env.E2E_SITE_URL!;
@@ -40,6 +44,39 @@ export async function login(page: Page, owner: Owner, next = '/'): Promise<void>
   await page.getByLabel('Contraseña').fill(owner.password);
   await page.getByRole('button', { name: 'Entrar' }).click();
   await page.waitForURL((u) => !u.pathname.startsWith('/entrar'));
+}
+
+let serviceApp: App | undefined;
+
+/** App mínima sobre la DB de e2e para crear datos con los servicios reales (no por la UI). */
+export function e2eApp(): App {
+  serviceApp ??= createApp({
+    env: { APP_SECRET: 'e2e-secret-0123456789abcdef0123456789abcdef', APP_ORIGIN: APP_URL, DATABASE_PATH: ':memory:', LOG_LEVEL: 'silent', JOBS_INLINE_WORKER: 'false' },
+    db: e2eDb(),
+    fetcher: createFakeFetcher(),
+  });
+  return serviceApp;
+}
+
+export interface SeedBookmark extends SaveInput {
+  /** Texto para la búsqueda (se escribe tal cual, como si lo hubiera obtenido el fetch). */
+  excerpt?: string;
+  fetchStatus?: 'pending' | 'retrying' | 'succeeded' | 'failed' | 'skipped';
+  trashed?: boolean;
+}
+
+/** Crea enlaces para un dueño con el servicio real. Por defecto quedan con fetch 'succeeded' para no depender de la red. */
+export function seedBookmarks(owner: Owner, items: SeedBookmark[]): Bookmark[] {
+  const app = e2eApp();
+  const svc = bookmarkService(app);
+  return items.map((item) => {
+    const { bookmark } = svc.save(owner.id, item, 'web');
+    app.db.run(
+      'UPDATE bookmarks SET excerpt = ?, fetch_status = ?, next_attempt_at = NULL, trashed_at = ? WHERE id = ? AND user_id = ?',
+      item.excerpt ?? bookmark.excerpt, item.fetchStatus ?? 'succeeded', item.trashed ? Date.now() : null, bookmark.id, owner.id,
+    );
+    return svc.get(owner.id, bookmark.id) ?? bookmark;
+  });
 }
 
 export const test = base.extend<{ owner: Owner; signedIn: Page }>({
