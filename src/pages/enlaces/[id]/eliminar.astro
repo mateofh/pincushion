@@ -1,0 +1,53 @@
+---
+// Eliminar para siempre: confirmación con alcance (GET) y borrado (POST). Solo desde la papelera.
+import App from '../../../layouts/App.astro';
+import ConfirmPanel from '../../../components/ui/ConfirmPanel.astro';
+import { bookmarkService } from '../../../server/services/bookmarks.ts';
+import { seeOther, setFlash } from '../../../server/http.ts';
+import { parseId } from '../../../domain/authz.ts';
+
+const { app, user, csrf } = Astro.locals;
+const id = parseId(Astro.params.id);
+const svc = bookmarkService(app);
+const bookmark = id === null ? null : svc.get(user!.id, id);
+if (id === null || !bookmark) return Astro.rewrite('/404');
+
+if (bookmark.trashedAt === null) {
+  setFlash(Astro.cookies, app.config, { kind: 'error', message: 'Solo puedes eliminar para siempre desde la papelera. Primero mueve el enlace a la papelera.' });
+  return seeOther(`/enlaces/${id}`);
+}
+
+if (Astro.request.method === 'POST') {
+  const n = svc.purge(user!.id, [id]);
+  setFlash(Astro.cookies, app.config, {
+    kind: n > 0 ? 'success' : 'info',
+    message: n > 0 ? `«${bookmark.title.slice(0, 80)}» se eliminó para siempre.` : 'Ese enlace ya no estaba en la papelera.',
+  });
+  return seeOther('/papelera');
+}
+---
+
+<App title="Eliminar enlace para siempre" active="papelera">
+  <div class="wrap">
+    <h1>Eliminar enlace</h1>
+    <ConfirmPanel
+      title="¿Eliminar este enlace para siempre?"
+      scope={`Se eliminará «${bookmark.title.slice(0, 120)}» para siempre. No se puede deshacer.`}
+      action={`/enlaces/${id}/eliminar`}
+      csrf={csrf}
+      confirmLabel="Eliminar para siempre"
+      cancelHref="/papelera"
+    />
+  </div>
+</App>
+
+<style>
+  .wrap {
+    max-width: 640px;
+    display: grid;
+    gap: var(--s-4);
+  }
+  .wrap h1 {
+    margin: 0;
+  }
+</style>

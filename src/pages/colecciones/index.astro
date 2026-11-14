@@ -1,0 +1,160 @@
+---
+// Colecciones: lista con conteos, crear y accesos a renombrar / borrar.
+import App from '../../layouts/App.astro';
+import TextField from '../../components/ui/TextField.astro';
+import Button from '../../components/ui/Button.astro';
+import EmptyState from '../../components/ui/EmptyState.astro';
+import Icon from '../../components/ui/Icon.astro';
+import { collectionService } from '../../server/services/collections.ts';
+import { seeOther, setFlash, formString } from '../../server/http.ts';
+import { toFieldErrors } from '../../domain/errors.ts';
+import { collectionKey } from '../../domain/bookmark-rules.ts';
+import { plural } from '../../components/library/library-url.ts';
+
+const { app, user, csrf } = Astro.locals;
+const svc = collectionService(app);
+let name = '';
+let error = '';
+
+if (Astro.request.method === 'POST') {
+  const form = await Astro.request.clone().formData();
+  name = formString(form, 'name', 400);
+  try {
+    const exists = svc.list(user!.id).some((c) => collectionKey(c.name) === collectionKey(name));
+    if (exists) {
+      error = 'Ya tienes una colección con ese nombre.';
+      Astro.response.status = 422;
+    } else {
+      const created = svc.create(user!.id, name);
+      setFlash(Astro.cookies, app.config, { kind: 'success', message: `Colección «${created.name}» creada.` });
+      return seeOther('/colecciones');
+    }
+  } catch (err) {
+    const f = toFieldErrors(err);
+    if (!f) throw err;
+    error = Object.values(f)[0]!;
+    Astro.response.status = 422;
+  }
+}
+
+const collections = svc.list(user!.id);
+---
+
+<App title="Colecciones" active="colecciones">
+  <div class="wrap">
+    <header>
+      <h1>Colecciones</h1>
+      <p class="hint">Agrupa tus enlaces. Un enlace está en una sola colección (o en «Sin colección»).</p>
+    </header>
+
+    <form method="post" action="/colecciones" class="create" novalidate>
+      <input type="hidden" name="_csrf" value={csrf} />
+      <TextField id="name" name="name" label="Nombre de la colección" value={name} error={error} maxlength={80} placeholder="Por ejemplo, Lectura" />
+      <Button variant="primary" type="submit" icon="plus">Crear colección</Button>
+    </form>
+
+    {
+      collections.length === 0 ? (
+        <EmptyState title="Aún no tienes colecciones" icon="folder">
+          <p>Crea una arriba, o desde la Biblioteca selecciona enlaces y usa «Mover a…» con un nombre nuevo.</p>
+        </EmptyState>
+      ) : (
+        <ul class="items" aria-label="Tus colecciones">
+          {collections.map((c) => (
+            <li>
+              <a class="name" href={`/?coleccion=${c.id}`}>
+                <Icon name="folder" size={18} />
+                <span>{c.name}</span>
+                <span class="mono n">{plural(c.count, 'enlace', 'enlaces')}</span>
+              </a>
+              <span class="acts">
+                <Button variant="ghost" size="sm" href={`/colecciones/${c.id}`}>Renombrar<span class="visually-hidden"> «{c.name}»</span></Button>
+                <Button variant="ghost" size="sm" href={`/colecciones/${c.id}?borrar=1`} class="del">Borrar<span class="visually-hidden"> «{c.name}»</span></Button>
+              </span>
+            </li>
+          ))}
+        </ul>
+      )
+    }
+  </div>
+</App>
+
+<style>
+  .wrap {
+    max-width: 760px;
+    display: grid;
+    gap: var(--s-5);
+  }
+  .wrap h1 {
+    margin: 0;
+  }
+  .hint {
+    margin: var(--s-2) 0 0;
+    color: var(--text-2);
+  }
+  .create {
+    display: flex;
+    gap: var(--s-3);
+    align-items: flex-start;
+    flex-wrap: wrap;
+  }
+  .create :global(.field) {
+    flex: 1 1 260px;
+  }
+  .create :global(.btn) {
+    margin-top: 28px;
+  }
+  .items {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: grid;
+    gap: var(--s-2);
+  }
+  .items li {
+    display: flex;
+    gap: var(--s-3);
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    padding: var(--s-2) var(--s-4);
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--r-lg);
+  }
+  .name {
+    display: inline-flex;
+    gap: var(--s-2);
+    align-items: center;
+    min-height: var(--tap);
+    min-width: 0;
+    flex: 1 1 200px;
+    font-weight: 600;
+    text-decoration: none;
+    color: var(--text);
+  }
+  .name span:nth-child(2) {
+    overflow-wrap: anywhere;
+  }
+  .n {
+    font-size: 12px;
+    color: var(--text-muted);
+    font-weight: 400;
+  }
+  .acts {
+    display: flex;
+    gap: var(--s-2);
+  }
+  .acts :global(.btn) {
+    min-height: var(--tap);
+  }
+  .acts :global(.del) {
+    color: var(--mf-warn-text);
+    border-color: var(--mf-warn-text);
+  }
+  @media (max-width: 720px) {
+    .create :global(.btn) {
+      margin-top: 0;
+    }
+  }
+</style>

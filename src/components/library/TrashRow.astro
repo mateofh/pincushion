@@ -1,0 +1,101 @@
+---
+// Un enlace de la papelera: título, dominio, cuándo se elimina solo y las dos acciones (Restaurar / Eliminar definitivamente).
+import Favicon from '../ui/Favicon.astro';
+import Button from '../ui/Button.astro';
+import { daysUntilPurge, formatSavedDate, isoInstant, trashPurgeAt } from '../../domain/dates.ts';
+import type { Bookmark } from '../../server/contracts.ts';
+
+interface Props {
+  bookmark: Bookmark;
+  csrf: string;
+  now: number;
+  timeZone: string;
+}
+const { bookmark: b, csrf, now, timeZone } = Astro.props;
+const purgeAt = trashPurgeAt(b.trashedAt ?? now);
+const days = daysUntilPurge(b.trashedAt ?? now, now);
+const when = days === 0 ? 'hoy' : days === 1 ? 'mañana' : `en ${days} días`;
+---
+
+<article class="tr" data-bookmark-id={b.id}>
+  <div class="main">
+    <h2 class="title">{b.title}</h2>
+    <p class="meta">
+      <Favicon domain={b.domain} hasFavicon={b.hasFavicon} size={16} />
+      <span class="mono">{b.domain}</span>
+    </p>
+    <p class="purge">
+      Se elimina <time datetime={isoInstant(purgeAt)}>{when} ({formatSavedDate(purgeAt, timeZone)})</time>
+    </p>
+  </div>
+  <div class="acts">
+    <form method="post" action={`/enlaces/${b.id}/restaurar`}>
+      <input type="hidden" name="_csrf" value={csrf} />
+      <input type="hidden" name="volver" value="/papelera" />
+      <Button variant="primary" size="sm" type="submit" icon="undo">Restaurar<span class="visually-hidden"> «{b.title}»</span></Button>
+    </form>
+    <Button variant="ghost" size="sm" href={`/enlaces/${b.id}/eliminar`} icon="trash" class="del">Eliminar definitivamente<span class="visually-hidden"> «{b.title}»</span></Button>
+  </div>
+</article>
+
+<style>
+  .tr {
+    display: flex;
+    gap: var(--s-4);
+    align-items: center;
+    justify-content: space-between;
+    padding: var(--s-4);
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--r-lg);
+  }
+  .main {
+    min-width: 0;
+  }
+  .title {
+    font: 600 16px/1.35 var(--mf-text);
+    letter-spacing: 0;
+    margin: 0 0 var(--s-1);
+    overflow-wrap: anywhere;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+  .meta {
+    display: flex;
+    align-items: center;
+    gap: var(--s-2);
+    margin: 0;
+    font-size: 12px;
+    color: var(--text-muted);
+  }
+  .purge {
+    margin: var(--s-1) 0 0;
+    font-size: 14px;
+    color: var(--text-2);
+  }
+  .acts {
+    display: flex;
+    gap: var(--s-2);
+    flex-wrap: wrap;
+    justify-content: flex-end;
+    flex: none;
+  }
+  .acts :global(.btn) {
+    min-height: var(--tap);
+  }
+  .acts :global(.del) {
+    color: var(--mf-warn-text);
+    border-color: var(--mf-warn-text);
+  }
+  @media (max-width: 720px) {
+    .tr {
+      flex-direction: column;
+      align-items: stretch;
+    }
+    .acts {
+      justify-content: flex-start;
+    }
+  }
+</style>

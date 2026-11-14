@@ -1,0 +1,109 @@
+---
+// Etiquetas: lista con conteos y accesos a renombrar / borrar. Las etiquetas se crean al etiquetar enlaces.
+import App from '../../layouts/App.astro';
+import Button from '../../components/ui/Button.astro';
+import EmptyState from '../../components/ui/EmptyState.astro';
+import Icon from '../../components/ui/Icon.astro';
+import { tagService } from '../../server/services/tags.ts';
+import { plural } from '../../components/library/library-url.ts';
+
+const { app, user } = Astro.locals;
+const tags = tagService(app).list(user!.id);
+---
+
+<App title="Etiquetas" active="etiquetas">
+  <div class="wrap">
+    <header>
+      <h1>Etiquetas</h1>
+      <p class="hint">Las etiquetas se crean al etiquetar un enlace. Aquí puedes renombrarlas o borrarlas.</p>
+    </header>
+
+    {
+      tags.length === 0 ? (
+        <EmptyState title="Aún no tienes etiquetas" icon="tag">
+          <p>Añade etiquetas al guardar un enlace o selecciona varios en la Biblioteca y usa «Añadir etiqueta».</p>
+          <Button slot="actions" href="/" variant="primary">Ir a la Biblioteca</Button>
+        </EmptyState>
+      ) : (
+        <ul class="items" aria-label="Tus etiquetas">
+          {tags.map((t) => (
+            <li>
+              <a class="name" href={`/?etiqueta=${encodeURIComponent(t.key)}`}>
+                <Icon name="tag" size={18} />
+                <span>{t.name}</span>
+                <span class="mono n">{plural(t.count, 'enlace', 'enlaces')}</span>
+              </a>
+              <span class="acts">
+                <Button variant="ghost" size="sm" href={`/etiquetas/${t.id}`}>Renombrar<span class="visually-hidden"> «{t.name}»</span></Button>
+                <Button variant="ghost" size="sm" href={`/etiquetas/${t.id}?borrar=1`} class="del">Borrar<span class="visually-hidden"> «{t.name}»</span></Button>
+              </span>
+            </li>
+          ))}
+        </ul>
+      )
+    }
+  </div>
+</App>
+
+<style>
+  .wrap {
+    max-width: 760px;
+    display: grid;
+    gap: var(--s-5);
+  }
+  .wrap h1 {
+    margin: 0;
+  }
+  .hint {
+    margin: var(--s-2) 0 0;
+    color: var(--text-2);
+  }
+  .items {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: grid;
+    gap: var(--s-2);
+  }
+  .items li {
+    display: flex;
+    gap: var(--s-3);
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    padding: var(--s-2) var(--s-4);
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--r-lg);
+  }
+  .name {
+    display: inline-flex;
+    gap: var(--s-2);
+    align-items: center;
+    min-height: var(--tap);
+    min-width: 0;
+    flex: 1 1 200px;
+    font-weight: 600;
+    text-decoration: none;
+    color: var(--text);
+  }
+  .name span:nth-child(2) {
+    overflow-wrap: anywhere;
+  }
+  .n {
+    font-size: 12px;
+    color: var(--text-muted);
+    font-weight: 400;
+  }
+  .acts {
+    display: flex;
+    gap: var(--s-2);
+  }
+  .acts :global(.btn) {
+    min-height: var(--tap);
+  }
+  .acts :global(.del) {
+    color: var(--mf-warn-text);
+    border-color: var(--mf-warn-text);
+  }
+</style>

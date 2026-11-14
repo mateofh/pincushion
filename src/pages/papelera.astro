@@ -1,0 +1,115 @@
+---
+// Papelera: enlaces movidos aquí, con la fecha en que se eliminan solos. Restaurar, eliminar definitivamente y vaciar (con confirmación).
+import App from '../layouts/App.astro';
+import TrashRow from '../components/library/TrashRow.astro';
+import EmptyState from '../components/ui/EmptyState.astro';
+import ConfirmPanel from '../components/ui/ConfirmPanel.astro';
+import Pagination from '../components/ui/Pagination.astro';
+import Button from '../components/ui/Button.astro';
+import { bookmarkService } from '../server/services/bookmarks.ts';
+import { seeOther, setFlash } from '../server/http.ts';
+import { TRASH_RETENTION_DAYS } from '../domain/dates.ts';
+import { plural } from '../components/library/library-url.ts';
+
+const { app, user, csrf } = Astro.locals;
+const svc = bookmarkService(app);
+
+if (Astro.request.method === 'POST') {
+  const form = await Astro.request.clone().formData();
+  if (form.get('accion') === 'vaciar') {
+    const n = svc.emptyTrash(user!.id);
+    setFlash(Astro.cookies, app.config, {
+      kind: n > 0 ? 'success' : 'info',
+      message: n > 0 ? `Papelera vaciada: ${plural(n, 'enlace eliminado', 'enlaces eliminados')} para siempre.` : 'La papelera ya estaba vacía.',
+    });
+  }
+  return seeOther('/papelera');
+}
+
+const cursor = Astro.url.searchParams.get('cursor') ?? undefined;
+const page = svc.listTrash(user!.id, cursor);
+const confirming = Astro.url.searchParams.get('vaciar') === '1' && page.total > 0;
+const now = app.clock.now();
+const olderHref = page.nextCursor ? `/papelera?cursor=${encodeURIComponent(page.nextCursor)}` : undefined;
+const newerHref = cursor ? '/papelera' : undefined;
+---
+
+<App title="Papelera" active="papelera">
+  <div class="wrap">
+    <header class="head">
+      <div>
+        <h1>Papelera</h1>
+        <p class="hint">Se eliminan solos {TRASH_RETENTION_DAYS} días después de moverlos a la papelera.</p>
+      </div>
+      {page.total > 0 && !confirming && <Button variant="ghost" href="/papelera?vaciar=1" icon="trash" class="empty-btn">Vaciar papelera</Button>}
+    </header>
+
+    {
+      confirming && (
+        <ConfirmPanel
+          title="¿Vaciar la papelera?"
+          scope={`Se eliminarán ${plural(page.total, 'enlace', 'enlaces')} para siempre.`}
+          action="/papelera"
+          csrf={csrf}
+          fields={{ accion: 'vaciar' }}
+          confirmLabel={`Eliminar ${plural(page.total, 'enlace', 'enlaces')}`}
+          cancelHref="/papelera"
+          id="vaciar"
+        />
+      )
+    }
+
+    {
+      page.items.length === 0 ? (
+        <EmptyState title="La papelera está vacía" icon="trash">
+          <p>Los enlaces que muevas a la papelera aparecerán aquí y podrás restaurarlos durante {TRASH_RETENTION_DAYS} días.</p>
+          <Button slot="actions" href="/" variant="primary">Volver a la Biblioteca</Button>
+        </EmptyState>
+      ) : (
+        <>
+          <p class="count mono">{plural(page.total, 'enlace', 'enlaces')} en la papelera</p>
+          <section class="list" aria-label="Enlaces en la papelera">
+            {page.items.map((b) => <TrashRow bookmark={b} csrf={csrf} now={now} timeZone={user!.timezone} />)}
+          </section>
+          <Pagination olderHref={olderHref} newerHref={newerHref} />
+        </>
+      )
+    }
+  </div>
+</App>
+
+<style>
+  .wrap {
+    max-width: 860px;
+    margin: 0 auto;
+    display: grid;
+    gap: var(--s-4);
+  }
+  .head {
+    display: flex;
+    gap: var(--s-4);
+    justify-content: space-between;
+    align-items: flex-end;
+    flex-wrap: wrap;
+  }
+  .head h1 {
+    margin: 0;
+  }
+  .hint {
+    margin: var(--s-2) 0 0;
+    color: var(--text-2);
+  }
+  .count {
+    margin: 0;
+    font-size: 13px;
+    color: var(--text-muted);
+  }
+  .list {
+    display: grid;
+    gap: var(--s-3);
+  }
+  .head :global(.empty-btn) {
+    color: var(--mf-warn-text);
+    border-color: var(--mf-warn-text);
+  }
+</style>

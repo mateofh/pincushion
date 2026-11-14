@@ -1,0 +1,82 @@
+---
+// Filtros activos de la Biblioteca como chips que se quitan de uno en uno, más "Quitar filtros".
+// Cada chip es un enlace normal (funciona sin JS) a la misma vista sin ese filtro.
+import Icon from '../ui/Icon.astro';
+
+interface Item {
+  label: string;
+  href: string;
+}
+interface Props {
+  items: Item[];
+  clearHref: string;
+}
+const { items, clearHref } = Astro.props;
+---
+
+{
+  items.length > 0 && (
+    <nav class="af" aria-label="Filtros activos">
+      <ul>
+        {items.map((i) => (
+          <li>
+            <a class="chip" href={i.href} aria-label={`Quitar filtro: ${i.label}`}>
+              <span class="lbl">{i.label}</span>
+              <Icon name="x" size={14} />
+            </a>
+          </li>
+        ))}
+        {items.length > 1 && <li><a class="clear" href={clearHref}>Quitar filtros</a></li>}
+      </ul>
+    </nav>
+  )
+}
+
+<style>
+  .af ul {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--s-2);
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    align-items: center;
+  }
+  .chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    min-height: 36px;
+    padding: 0 var(--s-3);
+    border-radius: var(--r-pill);
+    border: 1px solid var(--border);
+    background: var(--surface);
+    color: var(--text);
+    text-decoration: none;
+    font-size: 14px;
+    font-weight: 500;
+    max-width: 100%;
+  }
+  .chip:hover {
+    border-color: var(--text-2);
+  }
+  .lbl {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    max-width: 28ch;
+  }
+  .clear {
+    display: inline-flex;
+    align-items: center;
+    min-height: var(--tap);
+    padding: 0 var(--s-2);
+    font-size: 14px;
+    font-weight: 600;
+  }
+  @media (pointer: coarse), (max-width: 720px) {
+    .chip {
+      min-height: var(--tap);
+    }
+  }
+</style>
