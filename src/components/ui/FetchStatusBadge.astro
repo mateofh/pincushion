@@ -1,0 +1,33 @@
+---
+// Estado de la obtención de metadatos de un enlace: icono + texto de fetchStatusLabel().
+// Uso: <FetchStatusBadge status={bookmark.fetchStatus} />
+import Badge from './Badge.astro';
+import { fetchStatusLabel, type FetchStatus } from '../../domain/fetch-state.ts';
+import type { IconName } from './Icon.astro';
+
+interface Props {
+  status: FetchStatus;
+}
+const { status } = Astro.props;
+const VARIANT = { pending: 'blue', retrying: 'blue', succeeded: 'success', failed: 'warn', skipped: 'light' } as const;
+const ICON: Record<FetchStatus, IconName> = { pending: 'refresh', retrying: 'refresh', succeeded: 'check', failed: 'alert', skipped: 'minus' };
+const busy = status === 'pending' || status === 'retrying';
+---
+
+<span class:list={['fetch-badge', busy && 'is-busy']} data-fetch-status={status}>
+  <Badge variant={VARIANT[status]} icon={ICON[status]}>{fetchStatusLabel(status)}</Badge>
+</span>
+
+<style>
+  .fetch-badge {
+    display: inline-flex;
+  }
+  .is-busy :global(.icon) {
+    animation: spin 1.4s linear infinite;
+  }
+  @keyframes spin {
+    to {
+      transform: rotate(360deg);
+    }
+  }
+</style>

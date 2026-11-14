@@ -1,0 +1,174 @@
+---
+// Barra lateral de la Biblioteca (marco Ink): Todos, Favoritos, Sin colección, colecciones con
+// conteo, etiquetas principales y Papelera. Por debajo de 720 px se oculta y la sustituye
+// <MobileFilters> (que la reutiliza con `inSheet`).
+// Uso: <Sidebar counts={counts} collections={cols} tags={tags} current="coleccion" collectionId={3} />
+import Icon from './Icon.astro';
+import type { CollectionSummary, TagSummary } from '../../server/contracts.ts';
+
+interface Props {
+  counts: { all: number; favorites: number; unsorted: number; trash: number };
+  collections: CollectionSummary[];
+  tags: TagSummary[];
+  current?: 'todos' | 'favoritos' | 'sin-coleccion' | 'papelera' | 'coleccion' | 'etiqueta';
+  /** Colección activa cuando current="coleccion". */
+  collectionId?: number;
+  /** Claves de etiqueta activas (para marcarlas con aria-current). */
+  activeTags?: string[];
+  /** Máximo de etiquetas mostradas (por defecto 10). */
+  maxTags?: number;
+  inSheet?: boolean;
+}
+const { counts, collections, tags, current = 'todos', collectionId, activeTags = [], maxTags = 10, inSheet = false } = Astro.props;
+const shownTags = tags.slice(0, maxTags);
+const cur = (v: boolean) => (v ? 'page' : undefined);
+---
+
+<nav class:list={['sidebar on-ink', inSheet && 'in-sheet']} aria-label="Filtros de la Biblioteca">
+  <ul class="list">
+    <li><a href="/" aria-current={cur(current === 'todos' && activeTags.length === 0)}><Icon name="bookmark" size={18} /><span class="name">Todos</span><span class="mono n">{counts.all}</span></a></li>
+    <li><a href="/?favoritos=1" aria-current={cur(current === 'favoritos')}><Icon name="star" size={18} /><span class="name">Favoritos</span><span class="mono n">{counts.favorites}</span></a></li>
+    <li><a href="/?coleccion=sin-coleccion" aria-current={cur(current === 'sin-coleccion')}><Icon name="folder" size={18} /><span class="name">Sin colección</span><span class="mono n">{counts.unsorted}</span></a></li>
+  </ul>
+
+  <h2 class="mono gt">Colecciones</h2>
+  {
+    collections.length > 0 ? (
+      <ul class="list scroll">
+        {collections.map((c) => (
+          <li><a href={`/?coleccion=${c.id}`} aria-current={cur(current === 'coleccion' && collectionId === c.id)}><Icon name="folder" size={18} /><span class="name">{c.name}</span><span class="mono n">{c.count}</span></a></li>
+        ))}
+      </ul>
+    ) : <p class="none">Aún no tienes colecciones.</p>
+  }
+  <a class="more" href="/colecciones">Gestionar colecciones</a>
+
+  <h2 class="mono gt">Etiquetas</h2>
+  {
+    shownTags.length > 0 ? (
+      <ul class="list">
+        {shownTags.map((t) => (
+          <li><a href={`/?etiqueta=${encodeURIComponent(t.key)}`} aria-current={cur(activeTags.includes(t.key))}><Icon name="tag" size={18} /><span class="name">{t.name}</span><span class="mono n">{t.count}</span></a></li>
+        ))}
+      </ul>
+    ) : <p class="none">Aún no tienes etiquetas.</p>
+  }
+  <a class="more" href="/etiquetas">Todas las etiquetas</a>
+
+  <ul class="list trash">
+    <li><a href="/papelera" aria-current={cur(current === 'papelera')}><Icon name="trash" size={18} /><span class="name">Papelera</span><span class="mono n">{counts.trash}</span></a></li>
+  </ul>
+</nav>
+
+<style>
+  .sidebar {
+    display: none;
+    background: var(--mf-ink-900);
+    color: var(--chrome-text);
+    border: 1px solid var(--chrome-border);
+    border-radius: var(--r-lg);
+    padding: var(--s-3);
+  }
+  @media (min-width: 721px) {
+    .sidebar {
+      display: block;
+      position: sticky;
+      top: 88px;
+      max-height: calc(100vh - 104px);
+      overflow-y: auto;
+    }
+  }
+  .sidebar.in-sheet {
+    display: block;
+    position: static;
+    max-height: none;
+    border: 0;
+    border-radius: 0;
+    background: transparent;
+  }
+  .list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 2px;
+  }
+  .list.scroll {
+    max-height: 260px;
+    overflow-y: auto;
+  }
+  .list a {
+    display: flex;
+    align-items: center;
+    gap: var(--s-3);
+    min-height: var(--tap);
+    padding: 0 var(--s-3);
+    border-radius: var(--r-md);
+    color: var(--chrome-text);
+    text-decoration: none;
+    font-size: 15px;
+    font-weight: 500;
+    position: relative;
+  }
+  .list a:hover {
+    background: var(--mf-ink-800);
+    color: #fff;
+  }
+  /* Activo: fondo + barra azul + peso (no solo color). */
+  .list a[aria-current='page'] {
+    background: var(--mf-ink-800);
+    color: #fff;
+    font-weight: 700;
+  }
+  .list a[aria-current='page']::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 10px;
+    bottom: 10px;
+    width: 3px;
+    border-radius: 3px;
+    background: var(--mf-blue);
+  }
+  .name {
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .n {
+    color: var(--chrome-muted);
+  }
+  .gt {
+    margin: var(--s-4) var(--s-3) var(--s-1);
+    color: var(--chrome-muted);
+    font-family: var(--mf-mono);
+    font-size: 11px;
+    font-weight: 500;
+    letter-spacing: 0.14em;
+  }
+  .none {
+    margin: 0 var(--s-3);
+    color: var(--chrome-muted);
+    font-size: 14px;
+  }
+  .more {
+    display: inline-flex;
+    align-items: center;
+    min-height: var(--tap);
+    margin: 0 var(--s-3);
+    color: var(--mf-blue-bright);
+    font-size: 14px;
+    font-weight: 600;
+  }
+  .more:hover {
+    color: #fff;
+  }
+  .trash {
+    margin-top: var(--s-3);
+    padding-top: var(--s-3);
+    border-top: 1px solid var(--chrome-border);
+  }
+</style>

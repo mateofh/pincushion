@@ -1,0 +1,13 @@
+---
+// Galería del design system. Ruta: /dev/componentes
+// (Astro no enruta carpetas con prefijo "_", por eso no es /_dev/componentes; el contenido vive
+//  en ../_dev/Galeria.astro.)
+// Solo se sirve en desarrollo o con PINCUSHION_TEST_MODE=1 (e2e contra el build); en cualquier
+// otro caso responde 404. En producción exige sesión como el resto de la app.
+import Galeria from '../_dev/Galeria.astro';
+
+const enabled = import.meta.env.DEV || process.env.PINCUSHION_TEST_MODE === '1';
+if (!enabled) return new Response(null, { status: 404 });
+---
+
+<Galeria />

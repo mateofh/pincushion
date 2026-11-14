@@ -1,0 +1,64 @@
+---
+// Orden: formulario GET con select "Ordenar" y botón "Aplicar" visible sin JS.
+// Con JS, el formulario se envía al cambiar la selección y el botón se oculta.
+// `fields` conserva el resto de parámetros de la URL (vista, filtros…) como campos ocultos.
+// Uso: <SortSelect action="/" value={orden} fields={{ vista: 'lista' }} />
+import Select from './Select.astro';
+import Button from './Button.astro';
+
+interface Props {
+  action?: string;
+  value?: 'recientes' | 'antiguos' | 'titulo' | 'dominio';
+  fields?: Record<string, string>;
+  name?: string;
+}
+const { action = '/', value = 'recientes', fields = {}, name = 'orden' } = Astro.props;
+const options = [
+  { value: 'recientes', label: 'Más recientes' },
+  { value: 'antiguos', label: 'Más antiguos' },
+  { value: 'titulo', label: 'Título (A–Z)' },
+  { value: 'dominio', label: 'Dominio (A–Z)' },
+];
+---
+
+<form class="sort" method="get" action={action} data-sort-form>
+  {Object.entries(fields).map(([k, v]) => <input type="hidden" name={k} value={v} />)}
+  <Select id="orden" name={name} label="Ordenar" options={options} selected={value} />
+  <Button variant="secondary" size="sm" type="submit" class="apply" data-sort-apply>Aplicar</Button>
+</form>
+
+<style>
+  .sort {
+    display: flex;
+    align-items: flex-end;
+    gap: var(--s-2);
+  }
+  .sort :global(.field) {
+    display: flex;
+    align-items: center;
+    gap: var(--s-2);
+  }
+  .sort :global(.field label) {
+    font-size: 14px;
+    color: var(--text-2);
+  }
+  .sort :global(.field select) {
+    width: auto;
+    min-width: 11ch;
+    border-radius: var(--r-pill);
+    padding-left: var(--s-4);
+  }
+  .sort :global([data-sort-apply]) {
+    min-height: var(--tap);
+  }
+</style>
+
+<script>
+  document.querySelectorAll<HTMLFormElement>('[data-sort-form]').forEach((form) => {
+    const select = form.querySelector('select');
+    const apply = form.querySelector<HTMLElement>('[data-sort-apply]');
+    if (!select) return;
+    if (apply) apply.hidden = true;
+    select.addEventListener('change', () => form.requestSubmit());
+  });
+</script>

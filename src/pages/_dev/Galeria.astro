@@ -1,0 +1,270 @@
+---
+// Contenido de la galería del design system (ver ../dev/componentes.astro). Datos de ejemplo,
+// sin consultas a la DB.
+import App from '../../layouts/App.astro';
+import Icon, { type IconName } from '../../components/ui/Icon.astro';
+import Button from '../../components/ui/Button.astro';
+import IconButton from '../../components/ui/IconButton.astro';
+import TextField from '../../components/ui/TextField.astro';
+import TextArea from '../../components/ui/TextArea.astro';
+import Select from '../../components/ui/Select.astro';
+import TagInput from '../../components/ui/TagInput.astro';
+import Badge from '../../components/ui/Badge.astro';
+import FetchStatusBadge from '../../components/ui/FetchStatusBadge.astro';
+import Favicon from '../../components/ui/Favicon.astro';
+import BookmarkCard from '../../components/ui/BookmarkCard.astro';
+import BookmarkRow from '../../components/ui/BookmarkRow.astro';
+import BookmarkList from '../../components/ui/BookmarkList.astro';
+import Sidebar from '../../components/ui/Sidebar.astro';
+import MobileFilters from '../../components/ui/MobileFilters.astro';
+import LibraryShell from '../../components/ui/LibraryShell.astro';
+import ViewToggle from '../../components/ui/ViewToggle.astro';
+import SortSelect from '../../components/ui/SortSelect.astro';
+import Toolbar from '../../components/ui/Toolbar.astro';
+import BulkBar from '../../components/ui/BulkBar.astro';
+import EmptyState from '../../components/ui/EmptyState.astro';
+import ConfirmPanel from '../../components/ui/ConfirmPanel.astro';
+import Pagination from '../../components/ui/Pagination.astro';
+import HighlightedText from '../../components/ui/HighlightedText.astro';
+import Notice from '../../components/ui/Notice.astro';
+import { highlightToHtml } from '../../domain/highlight.ts';
+import type { Bookmark, CollectionSummary, TagSummary } from '../../server/contracts.ts';
+
+const csrf = Astro.locals.csrf;
+const volver = '/dev/componentes';
+const now = Date.UTC(2026, 10, 3, 10, 0);
+
+function mk(id: number, over: Partial<Bookmark>): Bookmark {
+  return {
+    id, url: `https://example.com/${id}`, domain: 'example.com', title: `Enlace ${id}`, titleSource: 'page',
+    description: '', excerpt: '', collection: null, tags: [], isFavorite: false, fetchStatus: 'succeeded',
+    fetchErrorCode: null, hasFavicon: false, createdAt: now - id * 86_400_000, updatedAt: now, trashedAt: null, ...over,
+  };
+}
+const longTitle = 'Una guía muy completa y absurdamente larga sobre cómo conservar los títulos de trescientos caracteres sin romper la maquetación de ninguna tarjeta ni lista, incluso cuando el título no tiene fin, y se repite una y otra vez para comprobar el recorte elegante en tres líneas '.repeat(1).slice(0, 300);
+const longUrlDomain = 'subdominio-larguisimo-de-ejemplo.una-organizacion-con-nombre-extremadamente-largo.example.org';
+const items: Bookmark[] = [
+  mk(1, { title: 'Pan de masa madre: la guía definitiva', domain: 'cocina.example.com', description: 'Hidratación, fermentación y horneado paso a paso para un pan de corteza crujiente y miga abierta.', tags: [{ id: 1, name: 'cocina' }, { id: 2, name: 'pan' }], collection: { id: 1, name: 'Lectura' }, isFavorite: true, hasFavicon: true }),
+  mk(2, { title: longTitle, domain: 'blog.example.net', description: 'Descripción de ejemplo que ocupa varias líneas para comprobar el recorte por CSS en la vista de tarjetas, de modo que ninguna tarjeta crezca sin control aunque el texto sea larguísimo y no tenga puntos ni comas, y siga y siga.', tags: [{ id: 3, name: 'diseño' }] }),
+  mk(3, { title: 'Sin favicon y sin descripción', domain: 'www.zeta-sitio.dev' }),
+  mk(4, { title: 'Página que no se pudo leer', domain: 'bloqueado.example.org', fetchStatus: 'failed', fetchErrorCode: 'blocked', tags: [{ id: 4, name: 'pendiente de revisar' }] }),
+  mk(5, { title: 'Obteniendo datos…', domain: 'nuevo.example.io', fetchStatus: 'pending' }),
+  mk(6, { title: 'Documento PDF guardado sin vista previa', domain: 'archivo.example.com', fetchStatus: 'skipped', excerpt: 'Texto guardado para la búsqueda del documento.', tags: [{ id: 5, name: 'Referencia' }, { id: 6, name: 'masa madre' }] }),
+  mk(7, { title: 'URL larguísima', url: `https://${longUrlDomain}/ruta/${'segmento-'.repeat(30)}fin`, domain: longUrlDomain, description: 'El dominio y la URL son larguísimos pero no deben provocar desplazamiento horizontal.' }),
+  mk(8, { title: 'Reintentando la obtención', domain: 'lento.example.com', fetchStatus: 'retrying', isFavorite: true }),
+];
+const collections: CollectionSummary[] = [
+  { id: 1, name: 'Lectura', count: 18 },
+  { id: 2, name: 'Recetas de la abuela y otras cosas largas', count: 7 },
+  { id: 3, name: 'Trabajo', count: 124 },
+];
+const tags: TagSummary[] = [
+  { id: 1, name: 'cocina', key: 'cocina', count: 12 },
+  { id: 2, name: 'pan', key: 'pan', count: 5 },
+  { id: 3, name: 'diseño', key: 'diseno', count: 31 },
+  { id: 4, name: 'Referencia', key: 'referencia', count: 9 },
+];
+const counts = { all: 149, favorites: 12, unsorted: 24, trash: 3 };
+const filters = { counts, collections, tags, current: 'coleccion' as const, collectionId: 1, activeTags: [] as string[] };
+const icons: IconName[] = ['star', 'star-filled', 'folder', 'tag', 'trash', 'undo', 'search', 'plus', 'check', 'x', 'alert', 'refresh', 'external', 'grid', 'list', 'chevron-down', 'bookmark', 'link', 'menu', 'copy', 'edit', 'minus', 'info', 'arrow-right'];
+const hit = {
+  titleHtml: highlightToHtml('Pan de \u0002masa\u0003 madre: la guía definitiva'),
+  descriptionHtml: highlightToHtml('Hidratación y fermentación de la \u0002masa\u0003 paso a paso.'),
+};
+---
+
+<App title="Componentes" query="">
+  <h1>Componentes</h1>
+  <p class="lede">Galería del design system de Pincushion. Solo visible en desarrollo y en modo de pruebas.</p>
+
+  <section class="sec" aria-labelledby="g-botones">
+    <h2 id="g-botones">Botones</h2>
+    <div class="row">
+      <Button variant="primary" icon="plus">Primario</Button>
+      <Button variant="secondary">Secundario</Button>
+      <Button variant="ghost">Ghost</Button>
+      <Button variant="danger" icon="trash">Peligro</Button>
+      <Button variant="primary" iconEnd="arrow-right" href="#g-botones">Enlace con flecha</Button>
+    </div>
+    <div class="row">
+      <Button size="sm">Pequeño</Button>
+      <Button size="md">Mediano</Button>
+      <Button size="lg">Grande</Button>
+      <Button variant="primary" busy>Guardando…</Button>
+      <Button variant="secondary" disabled>Deshabilitado</Button>
+    </div>
+    <div class="row on-ink ink">
+      <Button variant="primary">Primario</Button>
+      <Button variant="ghost-light">Ghost light</Button>
+      <Button variant="ghost-light" size="sm">Sm</Button>
+    </div>
+    <div class="row">
+      <IconButton label="Copiar código" icon="copy" />
+      <IconButton label="Cerrar" icon="x" variant="filled" />
+      <IconButton label="Favorito" icon="star" pressed />
+    </div>
+  </section>
+
+  <section class="sec" aria-labelledby="g-iconos">
+    <h2 id="g-iconos">Iconos</h2>
+    <ul class="icons">
+      {icons.map((n) => <li><Icon name={n} size={24} /><span class="mono">{n}</span></li>)}
+    </ul>
+  </section>
+
+  <section class="sec" aria-labelledby="g-campos">
+    <h2 id="g-campos">Campos</h2>
+    <form class="form" method="get" action="/dev/componentes" data-demo-form>
+      <TextField id="d-url" name="url" label="URL" type="url" hint="Pega una dirección web." value="https://example.com" required />
+      <TextField id="d-titulo" name="titulo" label="Título" value={"x".repeat(320)} error="El título no puede superar 300 caracteres." />
+      <TextArea id="d-desc" name="descripcion" label="Descripción" value="Texto conservado tras un error." hint="Opcional." />
+      <Select id="d-col" name="coleccion" label="Colección" options={[{ value: '', label: 'Sin colección' }, { value: '1', label: 'Lectura' }]} selected="1" />
+      <TagInput id="d-tags" name="etiquetas" label="Etiquetas" value="cocina, pan" suggestions={['cocina', 'lectura', 'diseño']} />
+      <TagInput id="d-tags-err" name="etiquetas2" label="Etiquetas con error" value="una-etiqueta-que-es-demasiado-larga" error="Cada etiqueta admite hasta 40 caracteres." />
+      <div><Button type="submit" variant="primary" icon="check">Enviar</Button></div>
+    </form>
+  </section>
+
+  <section class="sec" aria-labelledby="g-estados">
+    <h2 id="g-estados">Badges, estado del fetch y favicons</h2>
+    <div class="row">
+      <Badge variant="blue">Info</Badge><Badge variant="dark">Dark</Badge><Badge variant="light">Etiqueta</Badge>
+      <Badge variant="success" icon="check">Éxito</Badge><Badge variant="warn" icon="alert">Fallo</Badge><Badge variant="gold" icon="star">Favorito</Badge>
+    </div>
+    <div class="row">
+      <FetchStatusBadge status="pending" /><FetchStatusBadge status="retrying" /><FetchStatusBadge status="succeeded" />
+      <FetchStatusBadge status="failed" /><FetchStatusBadge status="skipped" />
+    </div>
+    <div class="row">
+      <Favicon domain="example.com" size={16} /><Favicon domain="cocina.example.com" size={20} /><Favicon domain="zeta-sitio.dev" size={32} />
+      <Favicon domain="abc.org" size={32} /><Favicon domain="mateo.folador.com" size={32} /><Favicon domain="ñandú.es" size={32} />
+      <Favicon domain="cocina.example.com" hasFavicon size={32} />
+    </div>
+  </section>
+
+  <section class="sec" aria-labelledby="g-avisos">
+    <h2 id="g-avisos">Avisos</h2>
+    <div class="stack">
+      <Notice variant="info" title="Información">Tus enlaces se guardan al instante.</Notice>
+      <Notice variant="success" title="Enlace guardado">Se sumaron 2 etiquetas.</Notice>
+      <Notice variant="warn" title="Atención">La página está bloqueada: puedes guardarla igualmente.</Notice>
+      <Notice variant="error" title="No se pudo guardar">Revisa la dirección e inténtalo de nuevo.</Notice>
+      <p>Resaltado de búsqueda: <HighlightedText html={hit.titleHtml} /></p>
+    </div>
+  </section>
+
+  <section class="sec" aria-labelledby="g-biblioteca">
+    <h2 id="g-biblioteca">Biblioteca</h2>
+    <LibraryShell>
+      <Sidebar slot="sidebar" {...filters} />
+      <MobileFilters {...filters} />
+      <Toolbar>
+        <p class="count mono">149 enlaces</p>
+        <Fragment slot="controls">
+          <ViewToggle view="tarjetas" hrefs={{ tarjetas: '/dev/componentes?vista=tarjetas', lista: '/dev/componentes?vista=lista' }} />
+          <SortSelect action="/dev/componentes" value="recientes" fields={{ vista: 'tarjetas' }} />
+        </Fragment>
+      </Toolbar>
+      <BulkBar csrf={csrf} volver={volver} collections={collections} />
+      <BookmarkList view="tarjetas">
+        {items.map((b) => <BookmarkCard bookmark={b} csrf={csrf} volver={volver} selectable />)}
+      </BookmarkList>
+      <Pagination olderHref="/dev/componentes?cursor=abc" newerHref="/dev/componentes" />
+    </LibraryShell>
+  </section>
+
+  <section class="sec" aria-labelledby="g-lista">
+    <h2 id="g-lista">Vista de lista y resultados</h2>
+    <BookmarkList view="lista" label="Resultados">
+      {items.map((b) => <BookmarkRow bookmark={b} csrf={csrf} volver={volver} selectable />)}
+      <BookmarkRow bookmark={items[0]!} csrf={csrf} volver={volver} {...hit} />
+    </BookmarkList>
+  </section>
+
+  <section class="sec" aria-labelledby="g-vacios">
+    <h2 id="g-vacios">Vacío, cargando, error y confirmación</h2>
+    <div class="stack">
+      <EmptyState title="Guarda tu primer enlace" icon="bookmark" grid>
+        <ol>
+          <li>Instala el bookmarklet en tu barra de marcadores.</li>
+          <li>Pulsa el bookmarklet en cualquier página.</li>
+        </ol>
+        <Fragment slot="actions"><Button href="/bookmarklet" variant="primary">Instalar el bookmarklet</Button><Button href="/guardar" variant="ghost">Pegar una URL</Button></Fragment>
+      </EmptyState>
+      <EmptyState title="Sin resultados con estos filtros" icon="search">
+        <p>Prueba con menos filtros o con otra palabra.</p>
+        <Button slot="actions" href="/" variant="secondary">Quitar filtros</Button>
+      </EmptyState>
+      <div class="loading" aria-busy="true" role="status"><FetchStatusBadge status="pending" /> <span>Cargando resultados…</span></div>
+      <Notice variant="error" title="Error al cargar">No se pudieron cargar los enlaces. <a href="/dev/componentes">Reintentar</a></Notice>
+      <ConfirmPanel title="¿Vaciar la papelera?" scope="Se eliminarán 12 enlaces para siempre." action="/papelera" csrf={csrf} fields={{ accion: 'vaciar' }} confirmLabel="Eliminar 12 enlaces" cancelHref="/papelera" id="vaciar">
+        <p>Esta acción no se puede deshacer.</p>
+      </ConfirmPanel>
+    </div>
+  </section>
+</App>
+
+<style>
+  .lede {
+    color: var(--text-2);
+    margin: var(--s-2) 0 0;
+  }
+  .sec {
+    margin-top: var(--s-7);
+    display: grid;
+    gap: var(--s-4);
+    min-width: 0;
+  }
+  .row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--s-3);
+    align-items: center;
+  }
+  .ink {
+    background: var(--mf-ink-950);
+    padding: var(--s-4);
+    border-radius: var(--r-lg);
+  }
+  .icons {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(110px, 1fr));
+    gap: var(--s-3);
+  }
+  .icons li {
+    display: grid;
+    justify-items: center;
+    gap: var(--s-1);
+    padding: var(--s-3);
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--r-md);
+    color: var(--text-2);
+    min-width: 0;
+  }
+  .icons .mono {
+    color: var(--text-muted);
+    font-size: 11px;
+  }
+  .form {
+    display: grid;
+    gap: var(--s-4);
+    max-width: 560px;
+  }
+  .stack {
+    display: grid;
+    gap: var(--s-4);
+  }
+  .count {
+    margin: 0;
+    color: var(--text-muted);
+  }
+  .loading {
+    display: flex;
+    align-items: center;
+    gap: var(--s-3);
+  }
+</style>

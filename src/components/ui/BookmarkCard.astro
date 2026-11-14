@@ -1,0 +1,136 @@
+---
+// Enlace en vista de tarjetas. Presentacional: recibe el Bookmark y el contexto del formulario.
+// `titleHtml` / `descriptionHtml` (HTML ya escapado de highlightToHtml) activan el resaltado de Buscar.
+// Uso: <BookmarkCard bookmark={b} csrf={csrf} volver="/?vista=tarjetas" selectable />
+import Favicon from './Favicon.astro';
+import HighlightedText from './HighlightedText.astro';
+import TagChips from './TagChips.astro';
+import BookmarkActions from './BookmarkActions.astro';
+import BookmarkStatus from './BookmarkStatus.astro';
+import SelectBox from './SelectBox.astro';
+import { formatDate, isoDate } from './format.ts';
+import type { Bookmark } from '../../server/contracts.ts';
+
+interface Props {
+  bookmark: Bookmark;
+  csrf: string;
+  volver: string;
+  /** Muestra la casilla de selección (formulario #bulk). */
+  selectable?: boolean;
+  timeZone?: string;
+  titleHtml?: string;
+  descriptionHtml?: string;
+}
+const { bookmark: b, csrf, volver, selectable = false, timeZone, titleHtml, descriptionHtml } = Astro.props;
+const text = b.description || b.excerpt;
+---
+
+<article class="bm" data-bookmark-id={b.id} data-view="tarjetas">
+  <header class="head">
+    <Favicon domain={b.domain} hasFavicon={b.hasFavicon} size={20} />
+    <span class="mono domain">{b.domain}</span>
+    <time class="mono date" datetime={isoDate(b.createdAt)}>{formatDate(b.createdAt, timeZone)}</time>
+  </header>
+  <h2 class="title">
+    <a href={b.url} target="_blank" rel="noopener noreferrer">
+      <span class="clamp">{titleHtml ? <HighlightedText html={titleHtml} /> : b.title}</span>
+      <span class="visually-hidden"> (se abre en una pestaña nueva)</span>
+    </a>
+  </h2>
+  {descriptionHtml ? <p class="text"><HighlightedText html={descriptionHtml} /></p> : text && <p class="text">{text}</p>}
+  <TagChips tags={b.tags} collection={b.collection} />
+  <BookmarkStatus id={b.id} status={b.fetchStatus} csrf={csrf} volver={volver} />
+  <footer class="foot">
+    {selectable ? <SelectBox id={b.id} title={b.title} /> : <span />}
+    <BookmarkActions id={b.id} title={b.title} isFavorite={b.isFavorite} csrf={csrf} volver={volver} />
+  </footer>
+</article>
+
+<style>
+  .bm {
+    display: flex;
+    flex-direction: column;
+    gap: var(--s-2);
+    min-width: 0;
+    padding: var(--s-4) var(--s-4) var(--s-2);
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--r-lg);
+    box-shadow: var(--shadow-soft);
+    transition: border-color 0.15s ease, box-shadow 0.15s ease;
+  }
+  .bm:hover {
+    border-color: #c9d6e6;
+  }
+  .bm:has(input:checked) {
+    border-color: var(--mf-blue-600);
+    box-shadow: 0 0 0 1px var(--mf-blue-600), var(--shadow-soft);
+  }
+  .head {
+    display: flex;
+    align-items: center;
+    gap: var(--s-2);
+    min-width: 0;
+    color: var(--text-muted);
+  }
+  .domain {
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .date {
+    flex: none;
+  }
+  .title {
+    margin: 0;
+    font-size: 18px;
+    font-weight: 700;
+    letter-spacing: -0.015em;
+    line-height: 1.25;
+  }
+  .title a {
+    color: var(--text);
+    text-decoration: none;
+    display: block;
+    padding: 12px 0;
+    margin: -12px 0;
+  }
+  .clamp {
+    display: -webkit-box;
+    -webkit-line-clamp: 3;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+    overflow-wrap: anywhere;
+  }
+  .title a:hover {
+    color: var(--accent);
+    text-decoration: underline;
+    text-underline-offset: 3px;
+  }
+  .title :global(.ext) {
+    color: var(--text-muted);
+    margin-left: 4px;
+    vertical-align: -1px;
+  }
+  .text {
+    margin: 0;
+    color: var(--text-2);
+    font-size: 15px;
+    line-height: 1.45;
+    overflow-wrap: anywhere;
+    display: -webkit-box;
+    -webkit-line-clamp: 3;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+  .foot {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-top: auto;
+    padding-top: var(--s-1);
+    border-top: 1px solid var(--border);
+  }
+</style>

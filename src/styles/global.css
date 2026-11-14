@@ -169,3 +169,109 @@ mark {
 .field [aria-invalid='true'] {
   border-color: var(--mf-warn-text);
 }
+
+/* ---------- Design system (Ola 1) ---------- */
+
+.btn:hover {
+  text-decoration: none;
+}
+.btn-secondary:hover {
+  background: var(--mf-ink-800);
+  color: #fff;
+}
+.btn-ghost:hover {
+  background: var(--mf-graphite);
+  color: #fff;
+}
+.btn-ghost-light {
+  background: rgba(255, 255, 255, 0.08);
+  color: #fff;
+  border: 1px solid rgba(255, 255, 255, 0.28);
+}
+.btn-ghost-light:hover {
+  background: rgba(255, 255, 255, 0.18);
+  color: #fff;
+}
+.btn-danger {
+  background: var(--mf-warn-text);
+  color: #fff;
+}
+.btn-danger:hover {
+  background: #8f2515;
+  color: #fff;
+}
+.btn-sm {
+  min-height: 36px;
+  padding: 0 16px;
+  font-size: 13px;
+}
+.btn-lg {
+  min-height: 56px;
+  padding: 0 28px;
+  font-size: 16px;
+}
+/* Objetivo táctil: nunca por debajo de 44 px en pantallas pequeñas o táctiles. */
+@media (pointer: coarse), (max-width: 720px) {
+  .btn-sm {
+    min-height: var(--tap);
+  }
+}
+.btn[aria-busy='true'] {
+  cursor: progress;
+}
+.btn:disabled,
+.btn[aria-disabled='true'] {
+  opacity: 0.5;
+  cursor: not-allowed;
+  box-shadow: none;
+}
+.btn-ghost-light:focus-visible,
+.on-ink :focus-visible {
+  box-shadow: 0 0 0 3px var(--mf-ink-950), 0 0 0 5px var(--mf-blue-bright);
+}
+
+/* Metadatos en mono (dominio, fecha, conteos) */
+.mono {
+  font-family: var(--mf-mono);
+  font-size: 12px;
+  font-weight: 500;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+/* Grilla sutil de la marca: solo vacíos, entrar y bookmarklet */
+.grid-bg {
+  background-color: var(--mf-paper);
+  background-image: linear-gradient(var(--mf-paper-grid) 1px, transparent 1px), linear-gradient(90deg, var(--mf-paper-grid) 1px, transparent 1px);
+  background-size: 48px 48px;
+  background-position: -1px -1px;
+}
+
+.field label .req {
+  color: var(--mf-warn-text);
+}
+.field textarea {
+  min-height: 96px;
+  resize: vertical;
+}
+.field select {
+  appearance: none;
+  padding-right: 40px;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%235a6473' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 12px center;
+  background-size: 20px;
+}
+.field .error {
+  display: flex;
+  gap: 6px;
+  align-items: flex-start;
+}
+.field .error svg {
+  flex: none;
+  margin-top: 2px;
+}
+
+[hidden] {
+  display: none !important;
+}

@@ -1,0 +1,42 @@
+---
+// Badge de estado del fetch + botón "Reintentar" (solo si falló). Se omite si el estado es 'succeeded'.
+// Uso: <BookmarkStatus id={b.id} status={b.fetchStatus} csrf={csrf} volver={volver} />
+import FetchStatusBadge from './FetchStatusBadge.astro';
+import Button from './Button.astro';
+import type { FetchStatus } from '../../domain/fetch-state.ts';
+
+interface Props {
+  id: number;
+  status: FetchStatus;
+  csrf: string;
+  volver: string;
+}
+const { id, status, csrf, volver } = Astro.props;
+---
+
+{
+  status !== 'succeeded' && (
+    <div class="status">
+      <FetchStatusBadge status={status} />
+      {status === 'failed' && (
+        <form method="post" action={`/enlaces/${id}/reintentar`}>
+          <input type="hidden" name="_csrf" value={csrf} />
+          <input type="hidden" name="volver" value={volver} />
+          <Button variant="ghost" size="sm" type="submit" icon="refresh">Reintentar</Button>
+        </form>
+      )}
+    </div>
+  )
+}
+
+<style>
+  .status {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--s-2);
+  }
+  form {
+    margin: 0;
+  }
+</style>

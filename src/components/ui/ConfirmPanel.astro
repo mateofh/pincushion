@@ -1,0 +1,82 @@
+---
+// Panel de confirmación de una acción destructiva, con alcance explícito y botón danger.
+// El formulario envía POST a `action` con _csrf y los `fields` ocultos; cancelar es un enlace.
+// Uso: <ConfirmPanel title="¿Vaciar la papelera?" scope="Se eliminarán 12 enlaces para siempre."
+//        action="/papelera" csrf={csrf} fields={{ accion: 'vaciar' }} confirmLabel="Eliminar 12 enlaces" cancelHref="/papelera" />
+import Button from './Button.astro';
+import Icon from './Icon.astro';
+
+interface Props {
+  title: string;
+  /** Qué se verá afectado, dicho con números ("Se eliminarán 12 enlaces para siempre"). */
+  scope: string;
+  action: string;
+  csrf: string;
+  fields?: Record<string, string>;
+  confirmLabel: string;
+  cancelHref: string;
+  cancelLabel?: string;
+  id?: string;
+}
+const { title, scope, action, csrf, fields = {}, confirmLabel, cancelHref, cancelLabel = 'Cancelar', id = 'confirmar' } = Astro.props;
+---
+
+<section class="confirm" aria-labelledby={`${id}-t`} aria-describedby={`${id}-s`} data-confirm-panel>
+  <span class="ico"><Icon name="alert" size={24} /></span>
+  <h2 id={`${id}-t`}>{title}</h2>
+  <p class="scope" id={`${id}-s`}>{scope}</p>
+  <div class="detail"><slot /></div>
+  <form method="post" action={action}>
+    <input type="hidden" name="_csrf" value={csrf} />
+    {Object.entries(fields).map(([k, v]) => <input type="hidden" name={k} value={v} />)}
+    <div class="row">
+      <Button variant="danger" type="submit" icon="trash">{confirmLabel}</Button>
+      <Button variant="ghost" href={cancelHref}>{cancelLabel}</Button>
+    </div>
+  </form>
+</section>
+
+<style>
+  .confirm {
+    max-width: 560px;
+    margin: var(--s-6) auto;
+    padding: var(--s-6);
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-top: 4px solid var(--mf-warn-text);
+    border-radius: var(--r-lg);
+    box-shadow: var(--shadow-soft);
+    display: grid;
+    gap: var(--s-3);
+  }
+  .ico {
+    color: var(--mf-warn-text);
+    display: inline-flex;
+  }
+  h2 {
+    font-size: 26px;
+    font-weight: 800;
+    letter-spacing: -0.03em;
+  }
+  .scope {
+    margin: 0;
+    font-size: 17px;
+    font-weight: 600;
+    overflow-wrap: anywhere;
+  }
+  .detail {
+    color: var(--text-2);
+  }
+  .detail:empty {
+    display: none;
+  }
+  .detail :global(p) {
+    margin: 0;
+  }
+  .row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--s-3);
+    margin-top: var(--s-2);
+  }
+</style>
