@@ -8,7 +8,7 @@ import { parseId } from '../../../domain/authz.ts';
 export const POST: APIRoute = async ({ params, request, locals, cookies, rewrite }) => {
   const { app, user } = locals;
   const id = parseId(params.id);
-  const form = await request.formData();
+  const form = await request.clone().formData();
   const volver = safeReturnPath(formString(form, 'volver', 1000), '/');
   const raw = formString(form, 'value', 1);
   if (id === null || (raw !== '0' && raw !== '1')) return rewrite('/404');
