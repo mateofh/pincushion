@@ -18,7 +18,9 @@
     "test:unit": "vitest run",
     "test:e2e": "astro build && playwright test --trace off",
     "test": "npm run check && npm run test:unit && npm run test:e2e",
-    "test:ux": "astro build && playwright test --trace off --grep @nocturno"
+    "test:ux": "astro build && playwright test --trace off --grep @nocturno",
+    "db:backup": "node --disable-warning=ExperimentalWarning scripts/backup.ts",
+    "db:restore": "node --disable-warning=ExperimentalWarning scripts/restore.ts"
   },
   "dependencies": {
     "@astrojs/node": "^11.1.13",

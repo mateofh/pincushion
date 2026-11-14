@@ -27,7 +27,24 @@ export type Config = z.infer<typeof schema> & {
   testHosts: Set<string>;
 };
 
-export function loadConfig(env: Record<string, string | undefined> = process.env): Config {
+let dotenvLoaded = false;
+
+/** Carga ./.env (si existe) en process.env sin pisar variables ya definidas. Una vez por proceso. */
+export function loadDotEnv(path = '.env'): void {
+  if (dotenvLoaded) return;
+  dotenvLoaded = true;
+  try {
+    process.loadEnvFile(path);
+  } catch (err) {
+    if ((err as NodeJS.ErrnoException).code !== 'ENOENT') throw err;
+  }
+}
+
+export function loadConfig(env?: Record<string, string | undefined>): Config {
+  if (!env) {
+    if (process.env.NODE_ENV !== 'test') loadDotEnv();
+    env = process.env;
+  }
   const parsed = schema.safeParse(env);
   if (!parsed.success) {
     const issues = parsed.error.issues.map((i) => `${i.path.join('.')}: ${i.message}`).join('; ');
