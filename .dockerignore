@@ -1,0 +1,25 @@
+# Nada de estado local, secretos ni artefactos en el contexto de build.
+.git
+.gitignore
+.worktrees
+.claude
+node_modules
+dist
+dist-*
+.astro
+data
+*.db
+*.db-wal
+*.db-shm
+.env
+.env.*
+!.env.example
+test-results
+playwright-report
+coverage
+tests
+docs
+Dockerfile
+.dockerignore
+npm-debug.log*
+.DS_Store
