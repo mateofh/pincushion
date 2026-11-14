@@ -61,3 +61,16 @@ const { open = false, ...rest } = Astro.props;
     border-top: 1px solid var(--chrome-border);
   }
 </style>
+
+<script>
+  // Escape cierra el desplegable de filtros y devuelve el foco a su botón.
+  document.addEventListener('keydown', (e) => {
+    if (e.key !== 'Escape') return;
+    const t = e.target as HTMLElement | null;
+    const details = t?.closest<HTMLDetailsElement>('details.mf');
+    if (!details?.open) return;
+    e.preventDefault();
+    details.open = false;
+    details.querySelector<HTMLElement>('summary')?.focus();
+  });
+</script>

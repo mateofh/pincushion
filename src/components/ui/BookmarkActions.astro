@@ -13,16 +13,32 @@ interface Props {
 }
 const { id, title, isFavorite, csrf, volver } = Astro.props;
 const favLabel = isFavorite ? 'Quitar de favoritos' : 'Marcar como favorito';
+// Mejora HTMX: la acción devuelve la página de `volver` (tras el 303) y se sustituye solo este enlace + el aviso.
+const htmx = {
+  'hx-target': 'closest article',
+  'hx-select': `article[data-bookmark-id="${id}"]`,
+  'hx-select-oob': '#flash',
+  'hx-swap': 'outerHTML',
+  'hx-sync': 'closest article:drop',
+};
 ---
 
 <div class="acts">
-  <form method="post" action={`/enlaces/${id}/favorito`}>
+  <form method="post" action={`/enlaces/${id}/favorito`} hx-post={`/enlaces/${id}/favorito`} {...htmx}>
     <input type="hidden" name="_csrf" value={csrf} />
     <input type="hidden" name="volver" value={volver} />
     <input type="hidden" name="value" value={isFavorite ? '0' : '1'} />
     <button class="act fav" type="submit" aria-pressed={isFavorite ? 'true' : 'false'} title={favLabel}>
       <Icon name={isFavorite ? 'star-filled' : 'star'} />
       <span class="visually-hidden">{favLabel}</span>
+    </button>
+  </form>
+  <form method="post" action={`/enlaces/${id}/papelera`} hx-post={`/enlaces/${id}/papelera`} {...htmx}>
+    <input type="hidden" name="_csrf" value={csrf} />
+    <input type="hidden" name="volver" value={volver} />
+    <button class="act trash" type="submit" title="Mover a la papelera">
+      <Icon name="trash" />
+      <span class="visually-hidden">Mover «{title}» a la papelera</span>
     </button>
   </form>
   <a class="act" href={`/enlaces/${id}`} title="Editar" aria-label={`Editar «${title}»`}>
@@ -55,6 +71,10 @@ const favLabel = isFavorite ? 'Quitar de favoritos' : 'Marcar como favorito';
   .act:hover {
     background: var(--border);
     color: var(--text);
+  }
+  .trash:hover {
+    background: var(--mf-warn-text);
+    color: #fff;
   }
   .fav[aria-pressed='true'] {
     color: var(--mf-gold-text);

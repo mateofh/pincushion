@@ -66,10 +66,10 @@ export interface SeedBookmark extends SaveInput {
 }
 
 /** Crea enlaces para un dueño con el servicio real. Por defecto quedan con fetch 'succeeded' para no depender de la red. */
-export function seedBookmarks(owner: Owner, items: SeedBookmark[]): Bookmark[] {
+export function seedBookmarks<const T extends SeedBookmark[]>(owner: Owner, items: T): { [K in keyof T]: Bookmark } {
   const app = e2eApp();
   const svc = bookmarkService(app);
-  return items.map((item) => {
+  const out = items.map((item) => {
     const { bookmark } = svc.save(owner.id, item, 'web');
     app.db.run(
       'UPDATE bookmarks SET excerpt = ?, fetch_status = ?, next_attempt_at = NULL, trashed_at = ? WHERE id = ? AND user_id = ?',
@@ -77,6 +77,7 @@ export function seedBookmarks(owner: Owner, items: SeedBookmark[]): Bookmark[] {
     );
     return svc.get(owner.id, bookmark.id) ?? bookmark;
   });
+  return out as { [K in keyof T]: Bookmark };
 }
 
 export const test = base.extend<{ owner: Owner; signedIn: Page }>({

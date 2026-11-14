@@ -24,7 +24,7 @@ const options = [
 ];
 ---
 
-<form id="bulk" class="bulk" method="post" action="/enlaces/lote" aria-label="Acciones sobre los enlaces seleccionados" data-bulk-bar data-count="0">
+<form id="bulk" class="bulk" method="post" action="/enlaces/lote" hx-post="/enlaces/lote" hx-target="#contenido" hx-select="#contenido" hx-select-oob="#flash" hx-swap="outerHTML" hx-sync="this:drop" aria-label="Acciones sobre los enlaces seleccionados" data-bulk-bar data-count="0">
   <input type="hidden" name="_csrf" value={csrf} />
   <input type="hidden" name="volver" value={volver} />
   <p class="count" role="status" aria-live="polite" data-bulk-count>
@@ -124,6 +124,22 @@ const options = [
   .bulk[data-enhanced] .static-hint {
     display: none;
   }
+  /* Con JS la barra solo aparece con selección y queda fija abajo, para no desplazar la lista al marcar. */
+  .bulk[data-enhanced][data-count='0'] {
+    display: none;
+  }
+  @media (min-width: 721px) {
+    .bulk[data-enhanced] {
+      position: fixed;
+      left: 50%;
+      transform: translateX(-50%);
+      width: min(1100px, calc(100% - 2 * var(--s-5)));
+      bottom: var(--s-4);
+      z-index: 15;
+      margin: 0;
+      box-shadow: var(--shadow-deep);
+    }
+  }
   @media (max-width: 720px) {
     .bulk[data-enhanced] {
       position: fixed;
@@ -138,9 +154,6 @@ const options = [
       box-shadow: var(--shadow-deep);
       max-height: 60vh;
       overflow-y: auto;
-    }
-    .bulk[data-enhanced][data-count='0'] {
-      display: none;
     }
     .tools {
       margin-left: 0;
@@ -167,20 +180,34 @@ const options = [
 </style>
 
 <script>
-  const bar = document.querySelector<HTMLFormElement>('[data-bulk-bar]');
-  const out = bar?.querySelector<HTMLElement>('[data-bulk-count]');
-  if (bar && out) {
+  // Mejora con JS: contador de selección y barra solo con selección. Se vuelve a aplicar tras cada intercambio HTMX.
+  const boxes = () => Array.from(document.querySelectorAll<HTMLInputElement>('input[type="checkbox"][form="bulk"]'));
+  let remembered: string[] = [];
+
+  const update = () => {
+    const bar = document.querySelector<HTMLFormElement>('[data-bulk-bar]');
+    const out = bar?.querySelector<HTMLElement>('[data-bulk-count]');
+    if (!bar || !out) return;
     bar.dataset.enhanced = 'true';
-    const boxes = () => Array.from(document.querySelectorAll<HTMLInputElement>('input[type="checkbox"][form="bulk"]'));
-    const update = () => {
-      const n = boxes().filter((b) => b.checked).length;
-      bar.dataset.count = String(n);
-      out.textContent = n === 0 ? 'Ningún enlace seleccionado' : n === 1 ? '1 seleccionado' : `${n} seleccionados`;
-    };
-    document.addEventListener('change', (e) => {
-      const t = e.target;
-      if (t instanceof HTMLInputElement && t.type === 'checkbox' && t.getAttribute('form') === 'bulk') update();
-    });
+    const n = boxes().filter((b) => b.checked).length;
+    bar.dataset.count = String(n);
+    out.textContent = n === 0 ? 'Ningún enlace seleccionado' : n === 1 ? '1 seleccionado' : `${n} seleccionados`;
+  };
+
+  document.addEventListener('change', (e) => {
+    const t = e.target;
+    if (t instanceof HTMLInputElement && t.type === 'checkbox' && t.getAttribute('form') === 'bulk') update();
+  });
+  // Antes de enviar el lote se recuerda la selección: si el servidor rechaza la acción, se conserva.
+  document.body.addEventListener('htmx:beforeRequest', (e) => {
+    if ((e.target as HTMLElement | null)?.id === 'bulk') remembered = boxes().filter((b) => b.checked).map((b) => b.value);
+  });
+  document.body.addEventListener('htmx:afterSettle', (e) => {
+    if ((e.target as HTMLElement | null)?.id !== 'contenido') return;
+    if (document.querySelector('#flash .flash-error')) {
+      for (const b of boxes()) if (remembered.includes(b.value)) b.checked = true;
+    }
     update();
-  }
+  });
+  update();
 </script>

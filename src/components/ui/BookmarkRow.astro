@@ -38,7 +38,7 @@ const text = b.description || b.excerpt;
       <span class="mono sep" aria-hidden="true">·</span>
       <time class="mono" datetime={isoDate(b.createdAt)}>{formatDate(b.createdAt, timeZone)}</time>
     </p>
-    {descriptionHtml ? <p class="text"><HighlightedText html={descriptionHtml} /></p> : text && <p class="text">{text}</p>}
+    {descriptionHtml ? <p class="text full"><HighlightedText html={descriptionHtml} /></p> : text && <p class="text">{text}</p>}
     <TagChips tags={b.tags} collection={b.collection} />
     <BookmarkStatus id={b.id} status={b.fetchStatus} csrf={csrf} volver={volver} />
   </div>
@@ -130,6 +130,12 @@ const text = b.description || b.excerpt;
     -webkit-line-clamp: 2;
     -webkit-box-orient: vertical;
     overflow: hidden;
+  }
+  /* Fragmento de búsqueda: se muestra entero para que la coincidencia no quede oculta. */
+  .text.full {
+    display: block;
+    -webkit-line-clamp: unset;
+    overflow: visible;
   }
   .acts {
     padding-top: 2px;

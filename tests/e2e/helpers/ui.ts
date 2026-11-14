@@ -55,7 +55,7 @@ export async function tapTargetsAtLeast(page: Page, min = 44, opts: { scope?: st
 
 /** axe-core (WCAG 2.x A/AA): cero violaciones serias o críticas. `incluir`/`excluir` acotan el análisis. */
 export async function expectNoSeriousAxe(page: Page, opts: { label?: string; include?: string; exclude?: string[] } = {}): Promise<void> {
-  let axe = new AxeBuilder({ page }).withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa']);
+  let axe = new AxeBuilder({ page: page as never }).withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa']);
   if (opts.include) axe = axe.include(opts.include);
   for (const ex of opts.exclude ?? []) axe = axe.exclude(ex);
   const { violations } = await axe.analyze();

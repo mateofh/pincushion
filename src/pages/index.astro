@@ -101,12 +101,12 @@ const pageTitle = params.cursor ? `${heading} (más antiguos)` : heading;
 <App title={pageTitle} active="biblioteca">
   <LibraryShell>
     <Sidebar slot="sidebar" {...filters} />
-    <MobileFilters {...filters} />
 
     <header class="head">
       <h1>{heading}</h1>
       <ActiveFilters items={filterChips} clearHref={clearHref} />
     </header>
+    <MobileFilters {...filters} />
 
     {
       page.items.length === 0 ? (

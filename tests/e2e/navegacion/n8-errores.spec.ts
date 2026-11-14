@@ -5,7 +5,7 @@ import { noHorizontalScroll, tapTargetsAtLeast } from '../helpers/ui.ts';
 
 /** El código mostrado es el X-Request-Id de la respuesta (así se cruza con los logs). */
 async function expectReferencia(page: Page, res: Response): Promise<string> {
-  const id = res.headers()['x-request-id'];
+  const id = res.headers()['x-request-id'] ?? '';
   expect(id, 'la respuesta lleva X-Request-Id').toMatch(/^[A-Za-z0-9-]{8,64}$/);
   const ref = page.locator('.ref code');
   await expect(page.locator('.ref')).toContainText('Código de referencia');
@@ -66,7 +66,7 @@ test('N8: 403 sin sesión ofrece Ir a Entrar @movil', async ({ page }) => {
     maxRedirects: 0,
   });
   expect(res.status()).toBe(403);
-  const id = res.headers()['x-request-id'];
+  const id = res.headers()['x-request-id'] ?? '';
   const html = await res.text();
   expect(html).toContain('Ir a Entrar');
   expect(html.match(/<code[^>]*>([^<]+)<\/code>/)?.[1], 'el código de referencia mostrado es el X-Request-Id').toBe(id);

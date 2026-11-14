@@ -16,8 +16,33 @@ document.body.addEventListener('htmx:configRequest', (e) => {
 });
 
 // Errores de servidor en peticiones HTMX: anunciar y dejar el formulario normal disponible.
-document.body.addEventListener('htmx:responseError', () => announce('No se pudo completar la acción. Inténtalo de nuevo.'));
-document.body.addEventListener('htmx:sendError', () => announce('Sin conexión con el servidor. Revisa tu red e inténtalo de nuevo.'));
+document.body.addEventListener('htmx:responseError', (e) => fail(e, 'No se pudo completar la acción. Inténtalo de nuevo.'));
+document.body.addEventListener('htmx:sendError', (e) => fail(e, 'Sin conexión con el servidor. Revisa tu red e inténtalo de nuevo.'));
+
+// Estado pendiente: aria-busy en el elemento que se está actualizando (enlace, barra de lote o formulario).
+const busyHost = (e: Event): HTMLElement | null => {
+  const t = e.target as HTMLElement | null;
+  return t?.closest<HTMLElement>('article, form') ?? null;
+};
+document.body.addEventListener('htmx:beforeRequest', (e) => busyHost(e)?.setAttribute('aria-busy', 'true'));
+document.body.addEventListener('htmx:afterRequest', (e) => busyHost(e)?.removeAttribute('aria-busy'));
+
+/** Fallo de una petición HTMX: aviso visible (en #flash) y anunciado; el formulario normal sigue disponible. */
+function fail(e: Event, message: string): void {
+  busyHost(e)?.removeAttribute('aria-busy');
+  const region = document.getElementById('flash');
+  if (region) {
+    region.replaceChildren();
+    const box = document.createElement('div');
+    box.className = 'flash flash-error';
+    box.tabIndex = -1;
+    const p = document.createElement('p');
+    p.textContent = message;
+    box.append(p);
+    region.append(box);
+  }
+  announce(message);
+}
 
 export function announce(message: string): void {
   const el = document.getElementById('announcer');

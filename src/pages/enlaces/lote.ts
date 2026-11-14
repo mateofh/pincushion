@@ -22,7 +22,7 @@ export const POST: APIRoute = async ({ request, locals, cookies }) => {
   const form = await request.clone().formData();
   const volver = safeReturnPath(formString(form, 'volver', 1000), '/');
   const accion = formString(form, 'accion', 30);
-  const ids = parseIds(form.getAll('ids'));
+  const requested = parseIds(form.getAll('ids'));
 
   const finish = (flash: Flash) => {
     setFlash(cookies, app.config, flash);
@@ -30,7 +30,10 @@ export const POST: APIRoute = async ({ request, locals, cookies }) => {
   };
   const fail = (message: string) => finish({ kind: 'error', message });
 
-  if (ids.length === 0) return fail('Selecciona al menos un enlace');
+  if (requested.length === 0) return fail('Selecciona al menos un enlace');
+  // Solo cuentan los enlaces propios: los ajenos o inexistentes se ignoran antes de tocar nada (ni etiquetas ni colecciones nuevas).
+  const ids = requested.filter((id) => bookmarkService(app).get(userId, id) !== null);
+  if (ids.length === 0) return fail('Los enlaces seleccionados ya no están disponibles.');
   if (!ACCIONES.has(accion)) return fail('Elige una acción para los enlaces seleccionados.');
 
   const bookmarks = bookmarkService(app);

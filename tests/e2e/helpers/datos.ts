@@ -25,7 +25,7 @@ export function sembrarDeterministas(owner: Owner, n: number, extra: (i: number)
     title: `${TEMAS[i % TEMAS.length]} ${i + 1}`,
     description: `Descripción breve del enlace número ${i + 1}.`,
     excerpt: `Texto guardado del enlace ${i + 1} con una frase memorable llamada nube de algodón ${i + 1}.`,
-    tags: [ETIQUETAS[i % ETIQUETAS.length], ETIQUETAS[(i + 2) % ETIQUETAS.length]],
+    tags: [ETIQUETAS[i % ETIQUETAS.length]!, ETIQUETAS[(i + 2) % ETIQUETAS.length]!],
     ...extra(i),
   }));
   // Inserción por lotes con una sola transacción: 1000 enlaces tardarían minutos uno a uno.

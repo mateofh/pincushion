@@ -97,7 +97,7 @@ const announce = result ? (total === 0 ? `Sin resultados para «${shortQ}»` : `
         </EmptyState>
       ) : (
         <section aria-label="Resultados" class="results">
-          <p class="summary"><span class="mono">{total}</span> resultado{total === 1 ? '' : 's'} para «{shortQ}»</p>
+          <p class="summary">{total} resultado{total === 1 ? '' : 's'} para «{shortQ}»</p>
           <div class="list">
             {result.items.map((hit) => (
               <SearchResult hit={hit} csrf={csrf ?? ''} volver={here} timeZone={user!.timezone} />
