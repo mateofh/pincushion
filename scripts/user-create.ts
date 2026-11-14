@@ -4,22 +4,28 @@ import { parseArgs } from 'node:util';
 import { loadConfig } from '../src/server/config.ts';
 import { openDb, pendingMigrations } from '../src/server/db/sqlite.ts';
 import { hashPassword } from '../src/server/crypto.ts';
+import { isValidTimeZone, newPasswordProblem } from '../src/server/auth/account.ts';
 
-const { values } = parseArgs({ options: { email: { type: 'string' }, password: { type: 'string' }, timezone: { type: 'string', default: 'UTC' } } });
+let values: { email?: string; password?: string; timezone?: string };
+try {
+  ({ values } = parseArgs({ options: { email: { type: 'string' }, password: { type: 'string' }, timezone: { type: 'string', default: 'UTC' } } }));
+} catch (err) {
+  console.error(`${(err as Error).message}\nUso: npm run user:create -- --email tu@correo --password "…" [--timezone Europe/Madrid]`);
+  process.exit(1);
+}
 const email = (values.email ?? '').trim().toLowerCase();
 const password = values.password ?? '';
-if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) || email.length > 254) {
+if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) || email.length < 3 || email.length > 254) {
   console.error('Email inválido. Uso: npm run user:create -- --email tu@correo --password "…"');
   process.exit(1);
 }
-if (password.length < 10 || password.length > 200) {
-  console.error('La contraseña debe tener entre 10 y 200 caracteres.');
+const pwProblem = newPasswordProblem(password);
+if (pwProblem) {
+  console.error(pwProblem.replace('La contraseña nueva', 'La contraseña'));
   process.exit(1);
 }
-try {
-  new Intl.DateTimeFormat('es', { timeZone: values.timezone });
-} catch {
-  console.error(`Zona horaria desconocida: ${values.timezone}`);
+if (!isValidTimeZone(values.timezone)) {
+  console.error(`Zona horaria desconocida: ${values.timezone} (usa un nombre IANA, p. ej. Europe/Madrid)`);
   process.exit(1);
 }
 const config = loadConfig();

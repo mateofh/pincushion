@@ -1,62 +1,139 @@
 ---
-// Entrar. Pública. POST con email y contraseña → crea sesión y vuelve a `next`.
+// Entrar. Pública. POST con email y contraseña → rate limit, sesión nueva (rotada) y vuelta a `next`.
+// Si había un borrador de un formulario enviado con la sesión expirada (N5), ofrece reenviarlo.
 import App from '../layouts/App.astro';
-import { authenticate, createSession, SESSION_ABSOLUTE_MS } from '../server/auth/sessions.ts';
-import { cookieName, formString, safeReturnPath, seeOther } from '../server/http.ts';
+import { attemptLogin } from '../server/auth/login.ts';
+import { sessionCookieName, setSessionCookie } from '../server/auth/sessions.ts';
+import { formString, safeReturnPath, seeOther } from '../server/http.ts';
+import { clientIp, tooManyMessage } from '../server/security/rate-limit.ts';
+import { clearDraftCookies, takeValidDraft, type Draft } from '../server/security/draft.ts';
 
-const { app, user } = Astro.locals;
+const { app, user, csrf, requestId } = Astro.locals;
+const { config } = app;
 const next = safeReturnPath(Astro.url.searchParams.get('next'));
 const expired = Astro.url.searchParams.get('expirada') === '1';
+const recovering = Astro.url.searchParams.get('recuperar') === '1';
+const method = Astro.request.method;
 let error = '';
 let email = '';
+let draft: Draft | null = null;
 
-if (user && Astro.request.method === 'GET') return Astro.redirect(next, 303);
-
-if (Astro.request.method === 'POST') {
+if (user) {
+  if (method === 'POST') {
+    // Con sesión solo se admite descartar el borrador (el middleware ya validó el CSRF).
+    const form = await Astro.request.formData();
+    if (formString(form, 'accion', 20) === 'descartar') {
+      const d = takeValidDraft(Astro.cookies, config, user.id, app.clock.now());
+      clearDraftCookies(Astro.cookies, config);
+      return seeOther(d?.next ?? next);
+    }
+    return seeOther(next);
+  }
+  if (!recovering) return Astro.redirect(next, 303);
+  draft = takeValidDraft(Astro.cookies, config, user.id, app.clock.now());
+  if (!draft) return Astro.redirect(next, 303);
+} else if (method === 'POST') {
   const form = await Astro.request.formData();
   email = formString(form, 'email', 254).trim();
-  const password = formString(form, 'password', 200);
   const target = safeReturnPath(formString(form, 'next', 1000));
-  if (!email || !password) {
-    error = 'Escribe tu email y tu contraseña.';
-  } else {
-    const found = await authenticate(app, email, password);
-    if (found) {
-      const { token } = createSession(app, found.id);
-      Astro.cookies.set(cookieName(app.config, 'pc_session'), token, {
-        path: '/', httpOnly: true, sameSite: 'lax', secure: app.config.secureCookies, maxAge: SESSION_ABSOLUTE_MS / 1000,
-      });
-      return seeOther(target);
-    }
-    error = 'El email o la contraseña no coinciden.';
+  const result = await attemptLogin(app, {
+    email,
+    password: formString(form, 'password', 200),
+    ip: clientIp(Astro),
+    requestId,
+    previousToken: Astro.cookies.get(sessionCookieName(config))?.value,
+  });
+  if (result.kind === 'ok') {
+    setSessionCookie(Astro.cookies, config, result.token);
+    const pending = takeValidDraft(Astro.cookies, config, result.session.user.id, app.clock.now());
+    if (pending) return seeOther(`/entrar?${new URLSearchParams({ recuperar: '1', next: target })}`);
+    return seeOther(target);
   }
-  Astro.response.status = 422;
+  if (result.kind === 'rate_limited') {
+    error = tooManyMessage(result.retryAfterS);
+    Astro.response.status = 429;
+    Astro.response.headers.set('Retry-After', String(result.retryAfterS));
+  } else {
+    error = result.kind === 'missing' ? 'Escribe tu email y tu contraseña.' : 'El email o la contraseña no coinciden.';
+    Astro.response.status = 422;
+  }
 }
+
+const LABELS: Record<string, string> = {
+  url: 'URL',
+  title: 'Título',
+  description: 'Descripción',
+  excerpt: 'Texto para la búsqueda',
+  tags: 'Etiquetas',
+  collection: 'Colección',
+  coleccion: 'Colección',
+  timezone: 'Zona horaria',
+  accion: 'Acción',
+};
+const summary = (draft?.fields ?? [])
+  .filter(([, v]) => v.trim() !== '')
+  .slice(0, 12)
+  .map(([k, v]) => ({ label: LABELS[k] ?? k, value: v.length > 160 ? v.slice(0, 159) + '…' : v }));
 ---
 
-<App title="Entrar" bare>
-  <section class="auth">
-    <div class="auth-card">
-      <p class="wordmark-lg" aria-hidden="true"><span>Pin</span><span>cushion</span></p>
-      <h1>Entrar</h1>
-      <p class="lede">Tus enlaces guardados, en un solo lugar.</p>
-      {expired && <p class="notice" role="status">Tu sesión expiró. Inicia sesión de nuevo; no se perdió nada.</p>}
-      <form method="post" novalidate>
-        <input type="hidden" name="next" value={next} />
-        <div class="field">
-          <label for="email">Email</label>
-          <input id="email" name="email" type="email" autocomplete="username" required value={email} aria-invalid={error ? 'true' : undefined} aria-describedby={error ? 'login-error' : undefined} />
+{
+  draft ? (
+    <App title="Recuperamos tus cambios" bare>
+      <section class="auth">
+        <div class="auth-card">
+          <h1>Recuperamos tus cambios</h1>
+          <p class="lede">Tu sesión había expirado cuando enviaste el formulario. Revisa lo que escribiste y reenvíalo.</p>
+          {summary.length > 0 && (
+            <dl class="draft-summary" aria-label="Cambios recuperados">
+              {summary.map((s) => (
+                <div>
+                  <dt>{s.label}</dt>
+                  <dd>{s.value}</dd>
+                </div>
+              ))}
+            </dl>
+          )}
+          <form method="post" action={draft.path}>
+            <input type="hidden" name="_csrf" value={csrf} />
+            {draft.fields.map(([k, v]) => (
+              <input type="hidden" name={k} value={v} />
+            ))}
+            <button class="btn btn-primary" type="submit">Reenviar cambios</button>
+          </form>
+          <form method="post" action="/entrar">
+            <input type="hidden" name="_csrf" value={csrf} />
+            <input type="hidden" name="accion" value="descartar" />
+            <button class="btn btn-ghost" type="submit">Descartar cambios</button>
+          </form>
         </div>
-        <div class="field">
-          <label for="password">Contraseña</label>
-          <input id="password" name="password" type="password" autocomplete="current-password" required aria-invalid={error ? 'true' : undefined} aria-describedby={error ? 'login-error' : undefined} />
+      </section>
+    </App>
+  ) : (
+    <App title="Entrar" bare>
+      <section class="auth">
+        <div class="auth-card">
+          <p class="wordmark-lg" aria-hidden="true"><span>Pin</span><span>cushion</span></p>
+          <h1>Entrar</h1>
+          <p class="lede">Tus enlaces guardados, en un solo lugar.</p>
+          {expired && <p class="notice" role="status">Tu sesión expiró. Inicia sesión de nuevo; no se perdió nada.</p>}
+          <form method="post" novalidate>
+            <input type="hidden" name="next" value={next} />
+            <div class="field">
+              <label for="email">Email</label>
+              <input id="email" name="email" type="email" autocomplete="username" required maxlength="254" value={email} aria-invalid={error ? 'true' : undefined} aria-describedby={error ? 'login-error' : undefined} />
+            </div>
+            <div class="field">
+              <label for="password">Contraseña</label>
+              <input id="password" name="password" type="password" autocomplete="current-password" required maxlength="200" aria-invalid={error ? 'true' : undefined} aria-describedby={error ? 'login-error' : undefined} />
+            </div>
+            {error && <p class="field error" id="login-error" role="alert">{error}</p>}
+            <button class="btn btn-primary" type="submit">Entrar</button>
+          </form>
         </div>
-        {error && <p class="field error" id="login-error" role="alert">{error}</p>}
-        <button class="btn btn-primary" type="submit">Entrar</button>
-      </form>
-    </div>
-  </section>
-</App>
+      </section>
+    </App>
+  )
+}
 
 <style>
   .auth {
@@ -76,6 +153,9 @@ if (Astro.request.method === 'POST') {
     padding: var(--s-6);
     display: grid;
     gap: var(--s-4);
+  }
+  .auth-card h1 {
+    margin: 0;
   }
   .wordmark-lg {
     margin: 0;
@@ -98,5 +178,26 @@ if (Astro.request.method === 'POST') {
   form {
     display: grid;
     gap: var(--s-4);
+  }
+  .draft-summary {
+    margin: 0;
+    display: grid;
+    gap: var(--s-3);
+    padding: var(--s-4);
+    border: 1px solid var(--border);
+    border-radius: var(--r-md);
+  }
+  .draft-summary div {
+    display: grid;
+    gap: var(--s-1);
+  }
+  .draft-summary dt {
+    font-weight: 600;
+    font-size: 14px;
+  }
+  .draft-summary dd {
+    margin: 0;
+    overflow-wrap: anywhere;
+    color: var(--text-muted);
   }
 </style>
