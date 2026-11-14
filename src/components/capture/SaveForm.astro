@@ -1,0 +1,342 @@
+---
+// Formulario de Guardar. Funciona como formulario HTML normal (POST /guardar con accion=obtener|guardar);
+// con HTMX, "Obtener datos" y el cambio de URL sustituyen solo el estado y los campos rellenables.
+// No contiene lógica de negocio: recibe todo ya calculado por la página.
+import Button from '../ui/Button.astro';
+import Icon from '../ui/Icon.astro';
+import Notice from '../ui/Notice.astro';
+import Select from '../ui/Select.astro';
+import TagInput from '../ui/TagInput.astro';
+import TextArea from '../ui/TextArea.astro';
+import TextField from '../ui/TextField.astro';
+import type { CollectionSummary, DuplicateInfo } from '../../server/contracts.ts';
+import { duplicateText, type FetchNote, type SaveErrors, type SaveValues } from './form.ts';
+
+interface Props {
+  values: SaveValues;
+  errors: SaveErrors;
+  note: FetchNote;
+  duplicate: DuplicateInfo | null;
+  collections: CollectionSummary[];
+  tagSuggestions: string[];
+  csrf: string;
+  timeZone: string;
+  now: number;
+}
+const { values, errors, note, duplicate, collections, tagSuggestions, csrf, timeZone, now } = Astro.props;
+const dup = duplicate ? duplicateText(duplicate, timeZone, now) : null;
+const isUpdate = duplicate !== null;
+const collectionOptions = [{ value: '', label: 'Sin colección' }, ...collections.map((c) => ({ value: String(c.id), label: c.name }))];
+// Mejora con HTMX: mismos atributos en el botón y en el campo URL.
+const hx = {
+  'hx-post': '/guardar',
+  'hx-vals': '{"accion":"obtener"}',
+  'hx-target': '#estado-datos',
+  'hx-select': '#estado-datos > *',
+  'hx-swap': 'innerHTML',
+  'hx-select-oob': '#campo-titulo,#campo-descripcion,#campo-excerpt,#acciones,#url-error-slot',
+  'hx-sync': 'closest form:replace',
+};
+---
+
+<form id="guardar-form" class="save-form" method="post" action="/guardar" novalidate>
+  <input type="hidden" name="_csrf" value={csrf} />
+  <input type="hidden" name="volver" value={values.volver} />
+  <input type="hidden" name="fetched_url" value={values.fetchedUrl} />
+  <!-- Botón por defecto: Enter en cualquier campo guarda (no obtiene datos). -->
+  <button type="submit" name="accion" value="guardar" class="default-submit" tabindex="-1" aria-hidden="true">Guardar</button>
+
+  <div class="field" id="campo-url">
+    <label for="url">URL<span class="req" aria-hidden="true"> *</span></label>
+    <div class="url-row">
+      <input
+        id="url"
+        name="url"
+        type="url"
+        inputmode="url"
+        autocomplete="off"
+        autocapitalize="off"
+        spellcheck="false"
+        required
+        maxlength="2100"
+        placeholder="https://…"
+        value={values.url}
+        aria-invalid={errors.url ? 'true' : undefined}
+        aria-describedby={errors.url ? 'url-hint url-error' : 'url-hint'}
+        hx-trigger="change, paste delay:300ms"
+        data-obtener
+        {...hx}
+      />
+      <Button variant="ghost" type="submit" name="accion" value="obtener" icon="refresh" data-obtener {...hx}>Obtener datos</Button>
+    </div>
+    <p class="hint" id="url-hint">Pega una dirección. «Obtener datos» rellena el título y el texto para la búsqueda; si la página no responde, puedes guardar igual.</p>
+    <div id="url-error-slot">
+      {errors.url && <p class="error" id="url-error"><Icon name="alert" size={16} /><span>{errors.url}</span></p>}
+    </div>
+  </div>
+
+  <div id="estado-datos" class="estado" aria-live="polite">
+    {note.kind === 'ok' && (
+      <Notice variant="success"><p>Datos obtenidos de <strong>{note.domain}</strong>. Revisa el título y guarda.</p></Notice>
+    )}
+    {note.kind === 'fail' && (
+      <Notice variant="warn" title={note.skipped ? 'Sin vista previa' : 'No se pudo leer la página'}>
+        <p>{note.skipped ? 'Puedes guardarlo igual con un título propio.' : 'Puedes guardar igual con un título propio.'} {note.detail}</p>
+      </Notice>
+    )}
+    {note.kind === 'limit' && <Notice variant="warn" title="Demasiados intentos"><p>{note.message}. Mientras tanto puedes guardar el enlace.</p></Notice>}
+    {errors.form && <Notice variant="error"><p>{errors.form}</p></Notice>}
+    {dup && duplicate && (
+      <Notice variant="info" title="Este enlace ya existe">
+        <p>
+          <strong>{dup.lead}</strong> · {dup.rest}
+          <a href={`/enlaces/${duplicate.id}`}> Ver el existente</a>
+        </p>
+      </Notice>
+    )}
+  </div>
+
+  <div id="campo-titulo">
+    <TextField id="title" name="title" label="Título" value={values.title} maxlength={300} error={errors.title} hint="Si lo dejas vacío usaremos el que tenga la página, o el dominio." />
+  </div>
+
+  <TagInput id="etiquetas" name="tags" label="Etiquetas" value={values.tags} suggestions={tagSuggestions} error={errors.tags} />
+
+  <Select id="coleccion" name="collection" label="Colección" options={collectionOptions} selected={values.collection} error={errors.collection} />
+
+  <details class="nueva" open={values.newCollection !== ''}>
+    <summary>Crear una colección nueva</summary>
+    <TextField id="nueva-coleccion" name="new_collection" label="Nombre nuevo" value={values.newCollection} maxlength={80} hint="Si escribes un nombre, el enlace va a esa colección en vez de la elegida arriba." />
+  </details>
+
+  <fieldset class="datos">
+    <legend>Datos de la página</legend>
+    <div id="campo-descripcion">
+      <TextArea id="description" name="description" label="Descripción" value={values.description} maxlength={1000} rows={3} error={errors.description} />
+    </div>
+    <div id="campo-excerpt">
+      <TextArea
+        id="excerpt"
+        name="excerpt"
+        label="Texto para la búsqueda"
+        value={values.excerpt}
+        rows={4}
+        error={errors.excerpt}
+        hint="Es lo que se usa para encontrar el enlace por su contenido. Si lo dejas vacío lo intentamos obtener después."
+      />
+    </div>
+  </fieldset>
+
+  <div class="check">
+    <input id="favorito" type="checkbox" name="favorite" value="1" checked={values.favorite} />
+    <label for="favorito">Favorito</label>
+  </div>
+
+  <div id="acciones" class="acciones">
+    <Button variant="primary" size="lg" type="submit" name="accion" value="guardar" icon={isUpdate ? 'refresh' : 'check'}>{isUpdate ? 'Actualizar enlace' : 'Guardar'}</Button>
+    <Button variant="ghost" size="lg" href={values.volver}>Cancelar</Button>
+  </div>
+</form>
+
+<script>
+  // Mejora progresiva de "Obtener datos": estado pendiente anunciado, 422/429 con contenido, errores de red.
+  const form = document.getElementById('guardar-form');
+  const status = () => document.getElementById('estado-datos');
+
+  function note(text: string, kind: 'pending' | 'error') {
+    const el = status();
+    if (!el) return;
+    el.replaceChildren();
+    const p = document.createElement('p');
+    p.className = `cap-note cap-note-${kind}`;
+    p.textContent = text;
+    el.appendChild(p);
+    el.setAttribute('aria-busy', kind === 'pending' ? 'true' : 'false');
+  }
+
+  function syncInvalid() {
+    const input = document.getElementById('url');
+    if (!input) return;
+    const hasError = !!document.getElementById('url-error');
+    if (hasError) input.setAttribute('aria-invalid', 'true');
+    else input.removeAttribute('aria-invalid');
+    input.setAttribute('aria-describedby', hasError ? 'url-hint url-error' : 'url-hint');
+    status()?.setAttribute('aria-busy', 'false');
+  }
+
+  if (form) {
+    // Lo que el usuario escriba mientras la petición está en vuelo no se pisa con la respuesta.
+    const FIELDS: Record<string, string> = { 'campo-titulo': 'title', 'campo-descripcion': 'description', 'campo-excerpt': 'excerpt' };
+    let snapshot: Record<string, string> = {};
+    const valueOf = (id: string) => (document.getElementById(id) as HTMLInputElement | HTMLTextAreaElement | null)?.value ?? '';
+    document.body.addEventListener('htmx:beforeRequest', (e) => {
+      const elt = (e as CustomEvent<{ elt: Element }>).detail.elt;
+      if (!elt.hasAttribute('data-obtener') || !form.contains(elt)) return;
+      snapshot = Object.fromEntries(Object.values(FIELDS).map((id) => [id, valueOf(id)]));
+      note('Obteniendo datos…', 'pending');
+    });
+    document.body.addEventListener('htmx:oobBeforeSwap', (e) => {
+      const d = (e as CustomEvent<{ target: Element; shouldSwap: boolean }>).detail;
+      const field = FIELDS[d.target?.id ?? ''];
+      if (field && field in snapshot && valueOf(field) !== snapshot[field]) d.shouldSwap = false;
+    });
+    document.body.addEventListener('htmx:beforeSwap', (e) => {
+      const d = (e as CustomEvent<{ target: Element; xhr: XMLHttpRequest; shouldSwap: boolean; isError: boolean }>).detail;
+      if (d.target?.id === 'estado-datos' && (d.xhr.status === 422 || d.xhr.status === 429)) {
+        d.shouldSwap = true;
+        d.isError = false;
+      }
+    });
+    document.body.addEventListener('htmx:afterSwap', syncInvalid);
+    const fail = (e: Event) => {
+      const elt = (e as CustomEvent<{ elt: Element }>).detail?.elt;
+      if (elt && elt.hasAttribute('data-obtener')) note('No se pudieron obtener los datos. Puedes guardar igual o volver a intentarlo.', 'error');
+    };
+    document.body.addEventListener('htmx:responseError', fail);
+    document.body.addEventListener('htmx:sendError', fail);
+    document.body.addEventListener('htmx:timeout', fail);
+  }
+</script>
+
+<style>
+  .save-form {
+    display: grid;
+    gap: var(--s-5);
+    padding: var(--s-6);
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--r-lg);
+    box-shadow: var(--shadow-soft);
+  }
+  .default-submit {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    padding: 0;
+    border: 0;
+  }
+  .url-row {
+    display: flex;
+    gap: var(--s-3);
+    align-items: stretch;
+  }
+  .url-row input {
+    flex: 1;
+    min-width: 0;
+  }
+  .estado:empty {
+    display: none;
+  }
+  .estado {
+    display: grid;
+    gap: var(--s-3);
+  }
+  .estado p {
+    margin: 0;
+  }
+  .estado :global(.cap-note) {
+    margin: 0;
+    padding: var(--s-3) var(--s-4);
+    border-radius: var(--r-md);
+    border: 1px solid var(--border);
+    border-left: 4px solid var(--accent);
+    background: var(--mf-paper);
+    font-weight: 500;
+  }
+  .estado :global(.cap-note-error) {
+    border-left-color: var(--mf-warn-text);
+    color: var(--mf-warn-text);
+  }
+  .estado :global(.cap-note-pending)::before {
+    content: '';
+    display: inline-block;
+    width: 12px;
+    height: 12px;
+    margin-right: 8px;
+    border-radius: 50%;
+    border: 2px solid var(--accent);
+    border-right-color: transparent;
+    vertical-align: -1px;
+    animation: cap-spin 0.9s linear infinite;
+  }
+  @keyframes cap-spin {
+    to {
+      transform: rotate(360deg);
+    }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .estado :global(.cap-note-pending)::before {
+      animation: none;
+    }
+  }
+  .nueva {
+    border: 1px dashed var(--border);
+    border-radius: var(--r-md);
+    padding: 0 var(--s-4);
+  }
+  .nueva summary {
+    min-height: var(--tap);
+    display: flex;
+    align-items: center;
+    cursor: pointer;
+    font-weight: 600;
+    font-size: 14px;
+    color: var(--accent);
+  }
+  .nueva[open] {
+    padding-bottom: var(--s-4);
+  }
+  .nueva[open] summary {
+    margin-bottom: var(--s-2);
+  }
+  .datos {
+    display: grid;
+    gap: var(--s-4);
+    margin: 0;
+    padding: var(--s-4);
+    border: 1px solid var(--border);
+    border-radius: var(--r-md);
+    background: var(--mf-paper);
+  }
+  .datos legend {
+    padding: 0 var(--s-2);
+    font: 500 12px var(--mf-mono);
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--text-muted);
+  }
+  .check {
+    display: flex;
+    align-items: center;
+    gap: var(--s-3);
+    min-height: var(--tap);
+  }
+  .check input {
+    width: 22px;
+    height: 22px;
+    accent-color: var(--mf-blue-600);
+  }
+  .check label {
+    font-weight: 600;
+  }
+  .acciones {
+    display: flex;
+    gap: var(--s-3);
+    flex-wrap: wrap;
+    align-items: center;
+  }
+  @media (max-width: 720px) {
+    .save-form {
+      padding: var(--s-4);
+      gap: var(--s-4);
+    }
+    .url-row {
+      flex-direction: column;
+    }
+    .acciones :global(.btn) {
+      flex: 1;
+    }
+  }
+</style>

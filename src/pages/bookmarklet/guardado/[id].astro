@@ -1,0 +1,131 @@
+---
+// Confirmación del popup con sesión del dueño: resumen del enlace y edición (título, etiquetas, colección,
+// favorito). Sin sesión, el middleware manda a entrar; el popup de solo token nunca muestra datos.
+import App from '../../../layouts/App.astro';
+import SavedSummary from '../../../components/capture/SavedSummary.astro';
+import Button from '../../../components/ui/Button.astro';
+import Notice from '../../../components/ui/Notice.astro';
+import Select from '../../../components/ui/Select.astro';
+import TagInput from '../../../components/ui/TagInput.astro';
+import TextField from '../../../components/ui/TextField.astro';
+import { bookmarkService } from '../../../server/services/bookmarks.ts';
+import { collectionService } from '../../../server/services/collections.ts';
+import { tagService } from '../../../server/services/tags.ts';
+import { ValidationError } from '../../../domain/errors.ts';
+import { parseId } from '../../../domain/authz.ts';
+import { formString, seeOther, setFlash } from '../../../server/http.ts';
+
+const { app, user, csrf } = Astro.locals;
+if (!user) return Astro.redirect(`/entrar?next=${encodeURIComponent(Astro.url.pathname)}`, 303);
+const id = parseId(Astro.params.id);
+if (id === null) return Astro.rewrite('/404');
+const svc = bookmarkService(app);
+let bookmark = svc.get(user.id, id);
+if (!bookmark) return Astro.rewrite('/404');
+
+let values = {
+  title: bookmark.titleSource === 'fallback' ? '' : bookmark.title,
+  tags: bookmark.tags.map((t) => t.name).join(', '),
+  collection: bookmark.collection ? String(bookmark.collection.id) : '',
+  favorite: bookmark.isFavorite,
+};
+const errors: Partial<Record<'title' | 'tags' | 'collection' | 'form', string>> = {};
+
+if (Astro.request.method === 'POST') {
+  const form = await Astro.request.formData();
+  values = {
+    title: formString(form, 'title', 1000),
+    tags: formString(form, 'tags', 2000),
+    collection: formString(form, 'collection', 20),
+    favorite: formString(form, 'favorite', 5) === '1',
+  };
+  try {
+    const n = Number(values.collection);
+    if (values.collection !== '' && !Number.isSafeInteger(n)) throw new ValidationError('collection', 'Esa colección no existe.');
+    const updated = svc.update(user.id, id, {
+      title: values.title,
+      tags: [values.tags],
+      collectionId: values.collection === '' ? null : n,
+      isFavorite: values.favorite,
+    });
+    if (!updated) return Astro.rewrite('/404');
+    setFlash(Astro.cookies, app.config, { kind: 'success', message: 'Cambios guardados.' });
+    return seeOther(`/bookmarklet/guardado/${id}`);
+  } catch (err) {
+    if (!(err instanceof ValidationError)) throw err;
+    if (err.field === 'title' || err.field === 'tags' || err.field === 'collection') errors[err.field] = err.message;
+    else errors.form = err.message;
+    Astro.response.status = 422;
+  }
+}
+
+const collections = collectionService(app).list(user.id);
+const tagSuggestions = tagService(app).list(user.id).map((t) => t.name);
+const options = [{ value: '', label: 'Sin colección' }, ...collections.map((c) => ({ value: String(c.id), label: c.name }))];
+---
+
+<App title="Enlace guardado" bare>
+  <div class="popup">
+    <SavedSummary bookmark={bookmark} />
+
+    <form class="edicion" method="post" action={`/bookmarklet/guardado/${id}`} novalidate>
+      <h2>Añadir detalles</h2>
+      <input type="hidden" name="_csrf" value={csrf} />
+      {errors.form && <Notice variant="error"><p>{errors.form}</p></Notice>}
+      <TextField id="title" name="title" label="Título" value={values.title} maxlength={300} error={errors.title} />
+      <TagInput id="etiquetas" name="tags" label="Etiquetas" value={values.tags} suggestions={tagSuggestions} error={errors.tags} />
+      <Select id="coleccion" name="collection" label="Colección" options={options} selected={values.collection} error={errors.collection} />
+      <div class="check">
+        <input id="favorito" type="checkbox" name="favorite" value="1" checked={values.favorite} />
+        <label for="favorito">Favorito</label>
+      </div>
+      <Button type="submit" variant="primary" size="lg" icon="check">Guardar cambios</Button>
+    </form>
+
+    <div class="pie">
+      <Button href="/" target="_blank" variant="ghost" iconEnd="external">Abrir Pincushion</Button>
+      <button type="button" class="btn btn-ghost" data-close hidden>Cerrar ventana</button>
+      <p class="visually-hidden" role="status" aria-live="polite" data-close-status></p>
+    </div>
+  </div>
+  <script src="../../../scripts/bookmarklet-popup.ts"></script>
+</App>
+
+<style>
+  .popup {
+    max-width: 520px;
+    margin: 0 auto;
+    display: grid;
+    gap: var(--s-4);
+  }
+  .edicion {
+    display: grid;
+    gap: var(--s-4);
+    padding: var(--s-4);
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--r-lg);
+  }
+  .edicion h2 {
+    font-size: 18px;
+  }
+  .check {
+    display: flex;
+    align-items: center;
+    gap: var(--s-3);
+    min-height: var(--tap);
+  }
+  .check input {
+    width: 22px;
+    height: 22px;
+    accent-color: var(--mf-blue-600);
+  }
+  .check label {
+    font-weight: 600;
+  }
+  .pie {
+    display: flex;
+    gap: var(--s-3);
+    flex-wrap: wrap;
+  }
+</style>

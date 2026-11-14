@@ -1,0 +1,277 @@
+---
+// Bookmarklet: instalación (arrastrar o copiar), instrucciones de móvil, último uso y rotación del token.
+import App from '../layouts/App.astro';
+import Button from '../components/ui/Button.astro';
+import ConfirmPanel from '../components/ui/ConfirmPanel.astro';
+import Icon from '../components/ui/Icon.astro';
+import { bookmarkletService } from '../server/auth/bookmarklet.ts';
+import { formatDateTime } from '../domain/dates.ts';
+import { formString, seeOther, setFlash } from '../server/http.ts';
+
+const { app, user, csrf, requestId } = Astro.locals;
+const svc = bookmarkletService(app, { requestId });
+
+if (Astro.request.method === 'POST') {
+  const form = await Astro.request.formData();
+  if (formString(form, 'accion', 20) === 'rotar') {
+    svc.rotate(user!.id);
+    setFlash(Astro.cookies, app.config, {
+      kind: 'success',
+      message: 'Token rotado. El bookmarklet anterior ya no funciona: instala el nuevo desde aquí.',
+    });
+  }
+  return seeOther('/bookmarklet');
+}
+
+const confirming = Astro.url.searchParams.get('confirmar') === 'rotar';
+const { info, token } = svc.ensureToken(user!.id);
+const href = svc.bookmarkletHref(token);
+const tz = user!.timezone;
+const lastUse = info.lastUsedAt !== null ? formatDateTime(info.lastUsedAt, tz) : null;
+const lastTest = info.lastTestAt !== null ? formatDateTime(info.lastTestAt, tz) : null;
+---
+
+<App title="Bookmarklet" active="bookmarklet">
+  <div class="bm">
+    <header class="head grid-bg">
+      <p class="eyebrow">Guardar con un clic</p>
+      <h1>Bookmarklet</h1>
+      <p class="lead">Guarda cualquier página desde tu navegador sin salir de ella. Se instala una sola vez.</p>
+    </header>
+
+    {
+      confirming && (
+        <ConfirmPanel
+          title="¿Rotar el token del bookmarklet?"
+          scope="El bookmarklet anterior dejará de funcionar en todos tus navegadores."
+          action="/bookmarklet"
+          csrf={csrf}
+          fields={{ accion: 'rotar' }}
+          confirmLabel="Rotar token"
+          cancelHref="/bookmarklet"
+        >
+          <p>Después tendrás que instalar el nuevo bookmarklet (arrastrarlo o copiarlo) en cada navegador que uses.</p>
+        </ConfirmPanel>
+      )
+    }
+
+    <ol class="steps">
+      <li class="step">
+        <h2><span class="n" aria-hidden="true">1</span> Arrástralo a tu barra de marcadores</h2>
+        <div class="drag">
+          <a class="bm-link" href={href} aria-describedby="drag-help">
+            <Icon name="bookmark" size={20} />
+            <span>+ Pincushion</span>
+          </a>
+          <p id="drag-help" class="hint">Arrastra este botón a la barra de marcadores. No lo pulses aquí: solo funciona en otras páginas.</p>
+        </div>
+        <p class="muted">Si no ves la barra de marcadores, actívala con Ctrl+Shift+B (Cmd+Shift+B en Mac).</p>
+      </li>
+
+      <li class="step">
+        <h2><span class="n" aria-hidden="true">2</span> Pruébalo</h2>
+        <p>Abre la página de prueba y pulsa el bookmarklet: no se guarda ningún enlace, solo comprobamos que llega.</p>
+        <div class="row">
+          <Button href="/bookmarklet/prueba" variant="primary" icon="check">Hacer la prueba</Button>
+        </div>
+        <p class="status" id="estado-uso">
+          {lastTest ? <>Última prueba: <strong>{lastTest}</strong>.</> : 'Todavía no has hecho la prueba.'}
+          {' '}
+          {lastUse ? <>Último uso: <strong>{lastUse}</strong>.</> : 'Aún no lo has usado para guardar.'}
+        </p>
+      </li>
+
+      <li class="step">
+        <h2><span class="n" aria-hidden="true">3</span> Úsalo en cualquier página</h2>
+        <p>Pulsa <strong>+ Pincushion</strong> y se abre una ventana pequeña con el enlace ya guardado. Ahí puedes añadir etiquetas.</p>
+      </li>
+    </ol>
+
+    <section class="panel" aria-labelledby="copiar-t">
+      <h2 id="copiar-t">¿No puedes arrastrarlo? Copia el código</h2>
+      <p>Crea un marcador nuevo, ponle de nombre «+ Pincushion» y pega este código como dirección.</p>
+      <div class="field">
+        <label for="codigo">Código del bookmarklet</label>
+        <textarea id="codigo" readonly rows="4" spellcheck="false" autocomplete="off" data-copy-source>{href}</textarea>
+      </div>
+      <div class="row">
+        <button type="button" class="btn btn-secondary" data-copy-button hidden><Icon name="copy" size={18} /> Copiar código</button>
+        <p class="visually-hidden" role="status" aria-live="polite" data-copy-status></p>
+      </div>
+      <p class="hint">Es tuyo y solo sirve para guardar enlaces en tu cuenta. No lo compartas.</p>
+    </section>
+
+    <section class="panel" aria-labelledby="movil-t">
+      <h2 id="movil-t">En el móvil</h2>
+      <p>En el teléfono no se puede arrastrar: se instala copiando el código de arriba.</p>
+      <details>
+        <summary>iPhone o iPad (Safari)</summary>
+        <ol>
+          <li>Copia el código de arriba.</li>
+          <li>En Safari, abre cualquier página y añádela a marcadores (Compartir, «Añadir marcador»).</li>
+          <li>Abre tus marcadores, pulsa «Editar» y entra en el que acabas de crear.</li>
+          <li>Cambia el nombre a «+ Pincushion» y pega el código en el campo de dirección.</li>
+          <li>Para usarlo: en la página que quieras guardar, abre Marcadores y toca «+ Pincushion».</li>
+        </ol>
+      </details>
+      <details>
+        <summary>Android (Chrome)</summary>
+        <ol>
+          <li>Copia el código de arriba.</li>
+          <li>En Chrome, abre cualquier página y guárdala como marcador (menú ⋮, estrella).</li>
+          <li>Edita el marcador desde Marcadores: nombre «+ Pincushion» y pega el código como URL.</li>
+          <li>Para usarlo: en la página que quieras guardar, escribe «Pincushion» en la barra de direcciones y toca el marcador sugerido (Chrome no ejecuta marcadores desde el menú).</li>
+        </ol>
+      </details>
+    </section>
+
+    <section class="panel" aria-labelledby="token-t">
+      <h2 id="token-t">Seguridad</h2>
+      <p>Si crees que alguien tiene tu bookmarklet, rota el token: el anterior dejará de funcionar y tendrás que instalar el nuevo.</p>
+      <div class="row">
+        <Button href="/bookmarklet?confirmar=rotar" variant="ghost" icon="refresh">Rotar token</Button>
+      </div>
+    </section>
+  </div>
+  <script src="../scripts/bookmarklet-copy.ts"></script>
+</App>
+
+<style>
+  .bm {
+    max-width: 760px;
+    margin: 0 auto;
+    display: grid;
+    gap: var(--s-5);
+  }
+  .head {
+    padding: var(--s-6);
+    border: 1px solid var(--border);
+    border-radius: var(--r-lg);
+    display: grid;
+    gap: var(--s-3);
+  }
+  .head p {
+    margin: 0;
+  }
+  .eyebrow {
+    font: 500 12px var(--mf-mono);
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--text-muted);
+  }
+  .lead {
+    color: var(--text-2);
+    max-width: 52ch;
+  }
+  .steps {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: grid;
+    gap: var(--s-4);
+  }
+  .step,
+  .panel {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--r-lg);
+    padding: var(--s-5);
+    display: grid;
+    gap: var(--s-3);
+    box-shadow: var(--shadow-soft);
+  }
+  .step p,
+  .panel p {
+    margin: 0;
+  }
+  .step h2,
+  .panel h2 {
+    display: flex;
+    align-items: center;
+    gap: var(--s-3);
+    font-size: 20px;
+  }
+  .n {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    background: var(--mf-ink-950);
+    color: #fff;
+    font: 700 15px var(--mf-display);
+    flex: none;
+  }
+  .drag {
+    display: grid;
+    gap: var(--s-2);
+    justify-items: start;
+  }
+  .bm-link {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--s-2);
+    min-height: 56px;
+    padding: 0 var(--s-5);
+    border-radius: var(--r-pill);
+    background: var(--mf-blue-600);
+    color: #fff;
+    font: 700 18px var(--mf-display);
+    text-decoration: none;
+    cursor: grab;
+    box-shadow: 0 8px 24px -8px rgba(31, 139, 255, 0.6);
+  }
+  .bm-link:hover {
+    background: var(--mf-blue-deep);
+    color: #fff;
+  }
+  .hint,
+  .muted {
+    font-size: 14px;
+    color: var(--text-muted);
+  }
+  .row {
+    display: flex;
+    gap: var(--s-3);
+    flex-wrap: wrap;
+    align-items: center;
+  }
+  .status {
+    font-size: 14px;
+    color: var(--text-2);
+  }
+  textarea {
+    font-family: var(--mf-mono);
+    font-size: 12px;
+    word-break: break-all;
+  }
+  details {
+    border: 1px solid var(--border);
+    border-radius: var(--r-md);
+    padding: 0 var(--s-4);
+  }
+  summary {
+    min-height: var(--tap);
+    display: flex;
+    align-items: center;
+    cursor: pointer;
+    font-weight: 600;
+  }
+  details[open] {
+    padding-bottom: var(--s-3);
+  }
+  details ol {
+    margin: 0;
+    padding-left: 20px;
+    display: grid;
+    gap: var(--s-2);
+  }
+  @media (max-width: 720px) {
+    .head,
+    .step,
+    .panel {
+      padding: var(--s-4);
+    }
+  }
+</style>

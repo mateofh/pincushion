@@ -1,0 +1,71 @@
+---
+// Resumen del enlace guardado en el popup. Mientras el fetch sigue pendiente, HTMX lo actualiza cada 3 s
+// (sin JS: enlace "Actualizar estado").
+import Favicon from '../ui/Favicon.astro';
+import FetchStatusBadge from '../ui/FetchStatusBadge.astro';
+import type { Bookmark } from '../../server/contracts.ts';
+interface Props {
+  bookmark: Bookmark;
+}
+const { bookmark: b } = Astro.props;
+const busy = b.fetchStatus === 'pending' || b.fetchStatus === 'retrying';
+const poll = busy ? { 'hx-get': `/bookmarklet/guardado/${b.id}`, 'hx-trigger': 'every 3s', 'hx-select': '#resumen', 'hx-swap': 'outerHTML' } : {};
+---
+<article id="resumen" class="resumen" data-bookmark-id={b.id} aria-busy={busy ? 'true' : undefined} {...poll}>
+  <div class="cabecera">
+    <Favicon domain={b.domain} hasFavicon={b.hasFavicon} size={32} />
+    <p class="dominio">{b.domain}</p>
+  </div>
+  <h2 class="titulo">{b.title}</h2>
+  {b.description && <p class="desc">{b.description}</p>}
+  <div class="estado">
+    <FetchStatusBadge status={b.fetchStatus} />
+    {busy && <a href={`/bookmarklet/guardado/${b.id}`}>Actualizar estado</a>}
+  </div>
+</article>
+<style>
+  .resumen {
+    display: grid;
+    gap: var(--s-2);
+    padding: var(--s-4);
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--r-lg);
+    box-shadow: var(--shadow-soft);
+  }
+  .cabecera {
+    display: flex;
+    align-items: center;
+    gap: var(--s-3);
+  }
+  .dominio {
+    margin: 0;
+    font: 500 12px var(--mf-mono);
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--text-muted);
+    overflow-wrap: anywhere;
+  }
+  .titulo {
+    font-size: 20px;
+    line-height: 1.2;
+    overflow-wrap: anywhere;
+  }
+  .desc {
+    margin: 0;
+    color: var(--text-2);
+    font-size: 14px;
+    display: -webkit-box;
+    -webkit-line-clamp: 3;
+    line-clamp: 3;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+  .estado {
+    display: flex;
+    gap: var(--s-3);
+    align-items: center;
+    flex-wrap: wrap;
+    font-size: 14px;
+  }
+</style>

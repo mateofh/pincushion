@@ -1,56 +1,161 @@
 ---
-// Guardar. ESQUELETO (Ola 0): URL + título + etiquetas. El stream de Guardar añade autofill, duplicados y colección.
+// Guardar: URL, "Obtener datos" (metadatos con timeout corto), aviso de duplicado y guardado con PRG.
+// Sin lógica de negocio: usa bookmarkService / collectionService / tagService y el PageFetcher de la app.
 import App from '../layouts/App.astro';
-import { saveBookmark } from '../server/services/bookmarks.ts';
-import { InvalidUrlError } from '../domain/url.ts';
-import { formString, seeOther, setFlash } from '../server/http.ts';
+import SaveForm from '../components/capture/SaveForm.astro';
+import { addedTagsText, clip, emptyValues, FETCH_TIMEOUT_MS, fetchFailureDetail, PREVIEW_LIMIT_PER_MIN, readValues, type FetchNote, type SaveErrors } from '../components/capture/form.ts';
+import { bookmarkService } from '../server/services/bookmarks.ts';
+import { collectionService } from '../server/services/collections.ts';
+import { tagService } from '../server/services/tags.ts';
+import { InvalidUrlError, domainOf, parseUserUrl } from '../domain/url.ts';
+import { ValidationError } from '../domain/errors.ts';
+import { PageFetchError } from '../server/adapters/types.ts';
+import { formString, safeReturnPath, seeOther, setFlash } from '../server/http.ts';
+import { hit, tooManyMessage } from '../server/security/rate-limit.ts';
+import type { SaveInput } from '../server/contracts.ts';
 
 const { app, user, csrf } = Astro.locals;
-let error = '';
-let values = { url: Astro.url.searchParams.get('url') ?? '', title: '', tags: '' };
+const userId = user!.id;
+const bookmarks = bookmarkService(app);
+
+const sp = Astro.url.searchParams;
+let values = emptyValues(safeReturnPath(sp.get('volver'), '/'));
+values.url = (sp.get('url') ?? '').slice(0, 2200);
+let errors: SaveErrors = {};
+let note: FetchNote = { kind: 'none' };
+let preselectDuplicateCollection = true;
 
 if (Astro.request.method === 'POST') {
   const form = await Astro.request.formData();
-  values = { url: formString(form, 'url', 2048), title: formString(form, 'title', 300), tags: formString(form, 'tags', 1000) };
-  try {
-    const r = saveBookmark(app, user!.id, { url: values.url, title: values.title, tags: values.tags.split(',') });
-    setFlash(Astro.cookies, app.config, { kind: 'success', message: r.created ? 'Enlace guardado.' : 'Ya lo tenías guardado: se actualizó.' });
-    return seeOther('/');
-  } catch (err) {
-    if (!(err instanceof InvalidUrlError)) throw err;
-    error = err.message;
-    Astro.response.status = 422;
+  values = readValues(form);
+  const accion = formString(form, 'accion', 20);
+
+  if (accion === 'obtener') {
+    const rl = hit(app, 'fetch-preview', String(userId), PREVIEW_LIMIT_PER_MIN, 60_000);
+    if (!rl.allowed) {
+      note = { kind: 'limit', message: tooManyMessage(rl.retryAfterS) };
+      Astro.response.status = 429;
+      Astro.response.headers.set('Retry-After', String(rl.retryAfterS));
+    } else {
+      let target: URL | null = null;
+      try {
+        target = parseUserUrl(values.url);
+      } catch (err) {
+        if (!(err instanceof InvalidUrlError)) throw err;
+        errors.url = err.message;
+      }
+      if (target) {
+        const href = target.href;
+        // Cambiar de URL descarta lo que se rellenó para la anterior; si no, solo se rellenan los huecos.
+        const stale = values.fetchedUrl !== '' && values.fetchedUrl !== href;
+        try {
+          const meta = await app.fetcher.fetchMetadata(href, { timeoutMs: FETCH_TIMEOUT_MS, signal: AbortSignal.timeout(FETCH_TIMEOUT_MS + 2000) });
+          if (!values.title || stale) values.title = clip(meta.title, 300);
+          if (!values.description || stale) values.description = clip(meta.description, 1000);
+          if (!values.excerpt || stale) values.excerpt = clip(meta.excerpt, 8000);
+          values.fetchedUrl = href;
+          note = { kind: 'ok', domain: domainOf(target) };
+        } catch (err) {
+          const code = err instanceof PageFetchError ? err.code : 'network';
+          if (stale) {
+            values.title = '';
+            values.description = '';
+            values.excerpt = '';
+            values.fetchedUrl = '';
+          }
+          note = { kind: 'fail', detail: fetchFailureDetail(code), skipped: code === 'not_html' };
+        }
+      }
+    }
+  } else {
+    preselectDuplicateCollection = false;
+    try {
+      const input: SaveInput = {
+        url: values.url,
+        title: values.title.trim() || undefined,
+        description: values.description.trim() || undefined,
+        excerpt: values.excerpt.trim() || undefined,
+        tags: [values.tags],
+        isFavorite: values.favorite ? true : undefined,
+      };
+      if (values.newCollection.trim()) input.newCollectionName = values.newCollection;
+      else if (values.collection === '') input.collectionId = null;
+      else {
+        const n = Number(values.collection);
+        if (!Number.isSafeInteger(n)) throw new ValidationError('collection', 'Esa colección no existe.');
+        input.collectionId = n;
+      }
+      const before = bookmarks.findDuplicate(userId, values.url);
+      const outcome = bookmarks.save(userId, input, 'web');
+      let message = 'Enlace guardado.';
+      if (!outcome.created) {
+        const added = Math.max(0, outcome.bookmark.tags.length - (before?.tags.length ?? 0));
+        message = outcome.restored
+          ? `Enlace restaurado de la papelera y actualizado${added ? `: ${addedTagsText(added)}` : ''}.`
+          : added
+            ? `Enlace actualizado: ${addedTagsText(added)}.`
+            : 'Enlace actualizado.';
+      }
+      setFlash(Astro.cookies, app.config, { kind: 'success', message });
+      return seeOther(values.volver);
+    } catch (err) {
+      if (err instanceof InvalidUrlError) errors.url = err.message;
+      else if (err instanceof ValidationError) {
+        const field = err.field === 'newCollection' ? 'collection' : err.field;
+        if (field === 'url' || field === 'title' || field === 'description' || field === 'excerpt' || field === 'tags' || field === 'collection') errors[field] = err.message;
+        else errors.form = err.message;
+      } else {
+        app.log.error('guardar.failed', { err });
+        errors.form = 'No pudimos guardar el enlace. Lo que escribiste sigue aquí: inténtalo de nuevo.';
+        Astro.response.status = 500;
+      }
+      if ((Astro.response.status ?? 200) < 400) Astro.response.status = 422;
+    }
   }
 }
+
+const duplicate = values.url ? bookmarks.findDuplicate(userId, values.url) : null;
+if (duplicate && preselectDuplicateCollection && values.collection === '' && duplicate.collection) values.collection = String(duplicate.collection.id);
+const collections = collectionService(app).list(userId);
+const tagSuggestions = tagService(app).list(userId).map((t) => t.name);
 ---
 
 <App title="Guardar enlace" active="guardar">
-  <h1>Guardar enlace</h1>
-  <form method="post" class="save-form" novalidate>
-    <input type="hidden" name="_csrf" value={csrf} />
-    <div class="field">
-      <label for="url">URL</label>
-      <input id="url" name="url" type="url" inputmode="url" required value={values.url} aria-invalid={error ? 'true' : undefined} aria-describedby={error ? 'url-error' : undefined} />
-      {error && <p class="error" id="url-error">{error}</p>}
-    </div>
-    <div class="field">
-      <label for="title">Título</label>
-      <input id="title" name="title" type="text" maxlength="300" value={values.title} />
-    </div>
-    <div class="field">
-      <label for="tags">Etiquetas</label>
-      <input id="tags" name="tags" type="text" value={values.tags} aria-describedby="tags-hint" />
-      <p class="hint" id="tags-hint">Sepáralas con comas.</p>
-    </div>
-    <button class="btn btn-primary" type="submit">Guardar</button>
-  </form>
+  <div class="guardar">
+    <h1>Guardar enlace</h1>
+    <p class="lead">Pega una dirección. Si ya la tenías, la actualizamos en vez de duplicarla.</p>
+    <SaveForm
+      values={values}
+      errors={errors}
+      note={note}
+      duplicate={duplicate}
+      collections={collections}
+      tagSuggestions={tagSuggestions}
+      csrf={csrf}
+      timeZone={user!.timezone}
+      now={app.clock.now()}
+    />
+  </div>
 </App>
 
 <style>
-  .save-form {
+  .guardar {
+    max-width: 720px;
+    margin: 0 auto;
     display: grid;
     gap: var(--s-4);
-    max-width: 640px;
-    margin-top: var(--s-5);
+  }
+  .lead {
+    margin: 0;
+    color: var(--text-2);
+  }
+</style>
+
+<style is:global>
+  /* Ya estás en Guardar: el botón flotante del móvil solo estorba. */
+  @media (max-width: 720px) {
+    .save-cta {
+      display: none;
+    }
   }
 </style>

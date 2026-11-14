@@ -1,0 +1,149 @@
+---
+// Prueba del bookmarklet: espera (HTMX cada 2 s, o botón "Comprobar" sin JS) la señal de la página de prueba.
+import App from '../../layouts/App.astro';
+import Button from '../../components/ui/Button.astro';
+import Notice from '../../components/ui/Notice.astro';
+import { bookmarkletService } from '../../server/auth/bookmarklet.ts';
+import { formatDateTime, formatTime } from '../../domain/dates.ts';
+import { probePopupHref } from '../../components/capture/form.ts';
+
+const { app, user } = Astro.locals;
+const now = app.clock.now();
+const { info, token } = bookmarkletService(app).ensureToken(user!.id);
+const raw = Number(Astro.url.searchParams.get('desde'));
+const desde = Number.isSafeInteger(raw) && raw > 0 && raw <= now ? raw : now;
+const done = info.lastTestAt !== null && info.lastTestAt >= desde;
+const stalled = !done && now - desde > 60_000;
+const tz = user!.timezone;
+const popup = probePopupHref(app.config.APP_ORIGIN, token);
+const previous = info.lastTestAt !== null && !done ? formatDateTime(info.lastTestAt, tz) : null;
+const pollUrl = `/bookmarklet/prueba?desde=${desde}`;
+---
+
+<App title="Prueba del bookmarklet" active="bookmarklet">
+  <div class="prueba">
+    <h1>Probar el bookmarklet</h1>
+    <p class="lead">Abre la página de prueba y pulsa el bookmarklet. No se guarda ningún enlace.</p>
+
+    <ol class="pasos">
+      <li>
+        <span>Abre la página de prueba en otra pestaña.</span>
+        <Button href="/bookmarklet/pagina-de-prueba" target="_blank" variant="secondary" iconEnd="external">Abrir la página de prueba</Button>
+      </li>
+      <li><span>En esa pestaña, pulsa <strong>+ Pincushion</strong> en tu barra de marcadores.</span></li>
+      <li><span>Vuelve aquí: la señal aparece sola en unos segundos.</span></li>
+    </ol>
+
+    <div aria-live="polite" class="vivo">
+      {
+        done ? (
+          <div id="estado-prueba" data-estado="ok">
+            <Notice variant="success">
+              <p><strong>✓ Funciona: guardado de prueba recibido a las {formatTime(info.lastTestAt!, tz)}</strong></p>
+              <p>Ya puedes usar el bookmarklet en cualquier página.</p>
+            </Notice>
+          </div>
+        ) : (
+          <div
+            id="estado-prueba"
+            data-estado={stalled ? 'sin-senal' : 'esperando'}
+            hx-get={pollUrl}
+            hx-trigger="every 2s"
+            hx-select="#estado-prueba"
+            hx-swap="outerHTML"
+          >
+            <Notice variant={stalled ? 'warn' : 'info'} title={stalled ? 'Todavía no hemos recibido nada' : undefined}>
+              {
+                stalled ? (
+                  <>
+                    <p>Causas probables:</p>
+                    <ul>
+                      <li>Pulsaste un marcador antiguo (si rotaste el token, instala el nuevo).</li>
+                      <li>El navegador bloqueó la ventana emergente: permítela para este sitio.</li>
+                      <li>El marcador no es el bookmarklet: comprueba que su dirección empieza por «javascript:».</li>
+                    </ul>
+                  </>
+                ) : (
+                  <p>Haz clic en el bookmarklet en la página de prueba… esperando señal.</p>
+                )
+              }
+            </Notice>
+          </div>
+        )
+      }
+    </div>
+    {previous && <p class="prev">Última prueba anterior: {previous}.</p>}
+
+    <form method="get" action="/bookmarklet/prueba" class="row">
+      <input type="hidden" name="desde" value={String(desde)} />
+      <Button type="submit" variant="primary" icon="refresh">Comprobar</Button>
+      <Button href={popup} target="pincushion" variant="ghost">Probar sin la barra</Button>
+      <Button href="/bookmarklet" variant="ghost">Volver al bookmarklet</Button>
+    </form>
+    <p class="hint">«Probar sin la barra» abre la misma ventana que el bookmarklet, con los datos de la página de prueba.</p>
+  </div>
+</App>
+
+<style>
+  .prueba {
+    max-width: 720px;
+    margin: 0 auto;
+    display: grid;
+    gap: var(--s-4);
+  }
+  .prueba p {
+    margin: 0;
+  }
+  .lead {
+    color: var(--text-2);
+  }
+  .pasos {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+    counter-reset: paso;
+    display: grid;
+    gap: var(--s-3);
+  }
+  .pasos li {
+    counter-increment: paso;
+    display: flex;
+    align-items: center;
+    gap: var(--s-3);
+    flex-wrap: wrap;
+    padding: var(--s-4);
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--r-md);
+  }
+  .pasos li::before {
+    content: counter(paso);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    background: var(--mf-ink-950);
+    color: #fff;
+    font: 700 14px var(--mf-display);
+  }
+  .pasos li span {
+    flex: 1;
+    min-width: 200px;
+  }
+  .vivo ul {
+    margin: var(--s-2) 0 0;
+    padding-left: 20px;
+  }
+  .row {
+    display: flex;
+    gap: var(--s-3);
+    flex-wrap: wrap;
+  }
+  .hint,
+  .prev {
+    font-size: 14px;
+    color: var(--text-muted);
+  }
+</style>
