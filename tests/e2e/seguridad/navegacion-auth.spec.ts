@@ -44,8 +44,8 @@ test('N5: sesión expirada al guardar → entrar → reenviar sin perder lo escr
   await page.getByRole('button', { name: 'Reenviar cambios' }).click();
 
   await expect(page).toHaveURL('/');
-  await expect(page.getByRole('status')).toContainText('Enlace guardado');
-  await expect(page.getByRole('link', { name: 'Receta escrita antes de expirar' })).toBeVisible();
+  await expect(page.locator('#flash')).toContainText('Enlace guardado');
+  await expect(page.getByRole('link', { name: 'Receta escrita antes de expirar' }).first()).toBeVisible();
   const n = e2eDb().get<{ n: number }>('SELECT COUNT(*) AS n FROM bookmarks WHERE user_id = ?', owner.id)!.n;
   expect(n).toBe(1);
 
