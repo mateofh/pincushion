@@ -54,17 +54,17 @@ Los 8 estados: acción primaria, secundarias, estado visible, validación, vací
 
 | Requisito | Implementación | Pruebas | Archivo previsto | Estado |
 |---|---|---|---|---|
-| Barra global idéntica, landmarks, `<title>` único, `aria-current` | `src/layouts/App.astro` | N1 (esc, mov) | `tests/e2e/navegacion/n1-barra.spec.ts` | pendiente |
+| Barra global idéntica, landmarks, `<title>` único, `aria-current` | `src/layouts/App.astro` | N1 (esc, mov) | `tests/e2e/navegacion/n1-barra-global.spec.ts` | pendiente de integración |
 | Estado en la URL; refrescar y atrás/adelante | Query de `/` y `/buscar` | N2 | `tests/e2e/navegacion/` | pendiente |
 | Enlaces directos | Rutas `/buscar?q=`, `/?coleccion=&vista=`, `/enlaces/:id` | N3 | `tests/e2e/navegacion/` | pendiente |
-| Sin sesión → `/entrar?next=` y regreso | `src/middleware.ts` | N4 | `tests/e2e/navegacion/` | pendiente |
-| Sesión expirada sin perder lo escrito | `lookupSession`, `/entrar` | N5 | `tests/e2e/navegacion/` | pendiente |
-| Recurso ajeno → 404 (GET y POST) | `userId` en todos los servicios | N6; Int de scoping | `tests/e2e/navegacion/`, `tests/integration/` | pendiente |
-| `next`/`volver` solo relativos | `src/server/http.ts` | N7 | `tests/e2e/navegacion/` | pendiente |
-| Páginas 403/404/429/500 con código de referencia | `src/pages/{403,404,500}.astro`, `ErrorPage.astro` | N8 (esc, mov) | `tests/e2e/navegacion/` | pendiente |
+| Sin sesión → `/entrar?next=` y regreso | `src/middleware.ts` | N4 | `tests/e2e/seguridad/navegacion-auth.spec.ts` | pendiente de integración |
+| Sesión expirada sin perder lo escrito | `lookupSession`, `/entrar` | N5 | `tests/e2e/seguridad/navegacion-auth.spec.ts` | pendiente de integración |
+| Recurso ajeno → 404 (GET y POST) | `userId` en todos los servicios | N6; Int de scoping | `tests/e2e/navegacion/n6-urls-ajenas.spec.ts`, `tests/integration/` | pendiente de integración |
+| `next`/`volver` solo relativos | `src/server/http.ts` | N7 | `tests/e2e/seguridad/navegacion-auth.spec.ts` | pendiente de integración |
+| Páginas 403/404/429/500 con código de referencia | `src/pages/{403,404,500}.astro`, `ErrorPage.astro` | N8 (esc, mov) | `tests/e2e/navegacion/n8-errores.spec.ts` | pendiente de integración |
 | PRG, flash y Deshacer | Todos los POST | N9 (esc, sjs) | `tests/e2e/navegacion/` | pendiente |
 | Idempotencia ante doble clic y recarga | upsert por URL normalizada | N10 | `tests/e2e/navegacion/` | pendiente |
-| HTMX falla y el formulario normal sigue | Mejora progresiva | R1 | `tests/e2e/resiliencia/r1-htmx.spec.ts` | pendiente |
+| HTMX falla y el formulario normal sigue | Mejora progresiva | R1 | `tests/e2e/resiliencia/r1-htmx.spec.ts` | pendiente de integración |
 | Job lento → fallo → "Reintentar" anunciado | `fetch_status`, live regions | R2 | `tests/e2e/resiliencia/r2-fetch.spec.ts` | pendiente |
 | Contenido extremo (título de 300, sin título, emoji/RTL, 40 etiquetas, URL de 2000, 0/1/1000 enlaces) | CSS y truncado accesible | C1 (hasta 50 bloquea; 1000 nocturno) | `tests/e2e/contenido/` | pendiente |
 
@@ -82,21 +82,21 @@ Los 8 estados: acción primaria, secundarias, estado visible, validación, vací
 | Requisito | Implementación | Pruebas | Archivo previsto | Estado |
 |---|---|---|---|---|
 | J1, J2, J3, P1, N1, N8, A3, C1 en Pixel 7 | Estilos móviles, hoja de filtros, barra de acciones fija | Proyecto `movil` (etiqueta `@movil`) | según cada escenario | pendiente |
-| Sin scroll horizontal, targets ≥ 44 px, barra de acciones sin tapar contenido, campo visible con teclado virtual | `src/styles/` | Checks automáticos | `tests/e2e/visual/` | pendiente |
-| Comparación visual en 390 y 1280 px (Biblioteca tarjetas/lista, Guardar, Buscar, Bookmarklet) | — | `toHaveScreenshot` | `tests/e2e/visual/` | pendiente |
-| Artefactos de revisión en 360/768/1024/1440 | — | `npm run test:ux` | `tests/e2e/visual/` | pendiente |
-| Rendimiento percibido (1000 enlaces, CPU ×4, Fast 3G: contenido < 1,5 s; búsqueda p95 < 150 ms; JS < 30 KB gzip) | — | Nocturno | `tests/e2e/rendimiento/` | pendiente |
+| Sin scroll horizontal, targets ≥ 44 px, barra de acciones sin tapar contenido, campo visible con teclado virtual | `src/styles/` | Checks automáticos | `tests/e2e/a11y/movimiento-zoom.spec.ts`, `tests/e2e/helpers/ui.ts` (`noHorizontalScroll`, `tapTargetsAtLeast`) | pendiente de integración |
+| Comparación visual en 390 y 1280 px (Biblioteca tarjetas/lista, Guardar, Buscar, Bookmarklet) | — | `toHaveScreenshot` | `tests/e2e/visual/comparacion.spec.ts` (líneas base al integrar) | pendiente de integración |
+| Artefactos de revisión en 360/768/1024/1440 | — | `npm run test:ux` | `tests/e2e/visual/artefactos.spec.ts` (`@nocturno`) | pendiente de integración |
+| Rendimiento percibido (1000 enlaces, CPU ×4, Fast 3G: contenido < 1,5 s; búsqueda p95 < 150 ms; JS < 30 KB gzip) | — | Nocturno | `tests/e2e/rendimiento/biblioteca-carga.spec.ts` (`@nocturno`) | pendiente |
 
 ## 8. Accesibilidad
 
 | Requisito | Pruebas | Archivo previsto | Estado |
 |---|---|---|---|
-| J2 y J3 solo con teclado (saltar al contenido, espacio, lote, atajo `/`) | Teclado | `tests/e2e/a11y/teclado.spec.ts` | pendiente |
-| Foco visible, Escape en diálogos, foco tras PRG | a11y | `tests/e2e/a11y/foco.spec.ts` | pendiente |
-| Live regions anuncian resultados y estados del fetch | a11y | `tests/e2e/a11y/live.spec.ts` | pendiente |
-| axe-core sin violaciones serias o críticas en cada celda y en móvil | a11y | `tests/e2e/a11y/axe.spec.ts` | pendiente |
-| Estados no solo por color (favorito, seleccionado, fallo) | a11y | `tests/e2e/a11y/color.spec.ts` | pendiente |
-| `prefers-reduced-motion`, zoom y texto al 200 % | a11y | `tests/e2e/a11y/zoom.spec.ts` | pendiente |
+| J2 y J3 solo con teclado (saltar al contenido, espacio, lote, atajo `/`) | Teclado | `tests/e2e/a11y/teclado.spec.ts` | pendiente de integración |
+| Foco visible, Escape en diálogos, foco tras PRG | a11y | `tests/e2e/a11y/foco.spec.ts` | pendiente de integración |
+| Live regions anuncian resultados y estados del fetch | a11y | `tests/e2e/resiliencia/r1-htmx.spec.ts` (aviso en `#announcer`); R2 en el stream Guardar | pendiente de integración |
+| axe-core sin violaciones serias o críticas en cada celda y en móvil | a11y | `tests/e2e/a11y/axe.spec.ts` | pendiente de integración |
+| Estados no solo por color (favorito, seleccionado, fallo) | a11y | `tests/e2e/a11y/color.spec.ts` | pendiente de integración |
+| `prefers-reduced-motion`, zoom y texto al 200 % | a11y | `tests/e2e/a11y/movimiento-zoom.spec.ts` | pendiente de integración |
 | Lector de pantalla real (VoiceOver, NVDA) | Manual | `docs/pruebas-ux.md` §2 | pendiente |
 
 ## 9. Reglas de negocio
@@ -154,3 +154,13 @@ Los 8 estados: acción primaria, secundarias, estado visible, validación, vací
 | Metas con personas: ≥ 80 % de éxito sin ayuda y SUS ≥ 75 | `docs/pruebas-ux.md` §4 | Sesiones con 5 personas | pendiente |
 | Bookmarklet verificado en Chrome, Firefox, Safari, iOS y Android; 3 sitios con CSP estricta | `docs/pruebas-ux.md` §1 | Manual | pendiente |
 | Fuera de alcance (siguiente versión): importar/exportar, API, share target | README, "Limitaciones conocidas" | — | no aplica |
+
+
+## 13. Pruebas de QA transversal (Ola 2)
+
+| Archivo | Cubre |
+|---|---|
+| `tests/e2e/sin-js/sin-js.spec.ts` | Entrar, Guardar en dos pasos, lote, favorito, Buscar, editar y papelera sin JavaScript (N9, J2, J3 sin JS) |
+| `tests/e2e/helpers/{ui,teclado,datos}.ts` | Utilidades compartidas |
+
+Las pruebas que dependen de pantallas de otros streams llevan `[requiere: biblioteca|guardar|buscar]` en el título. Estado de todas: pendiente de integración.
