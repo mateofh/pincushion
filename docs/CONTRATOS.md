@@ -16,9 +16,10 @@ Fuente de verdad para que los streams trabajen en paralelo sin pisarse. Lo manti
 |---|---|---|---|
 | `/` | GET | sesión | Biblioteca |
 | `/enlaces/:id` | GET, POST (editar) | sesión | Biblioteca |
+| `/dev/componentes` | GET (solo dev o `PINCUSHION_TEST_MODE=1`) | sesión | design |
 | `/enlaces/:id/favorito` | POST `value=1\|0`, `volver` | sesión | Biblioteca (Buscar lo usa) |
 | `/enlaces/:id/papelera`, `/restaurar`, `/eliminar`, `/reintentar` | POST (`/eliminar` también GET de confirmación) | sesión | Biblioteca |
-| `/enlaces/lote` | POST `ids[]`, `accion`, `etiqueta`, `coleccion`, `volver` | sesión | Biblioteca |
+| `/enlaces/lote` | POST `ids` (repetible), `accion=etiquetar\|quitar-etiqueta\|mover\|favorito\|papelera`, `etiqueta`, `coleccion` (vacío = Sin colección; `nueva:<nombre>` = crear), `volver` | sesión | Biblioteca |
 | `/colecciones`, `/colecciones/:id` (renombrar/borrar con confirmación) | GET, POST | sesión | Biblioteca |
 | `/etiquetas`, `/etiquetas/:id` | GET, POST | sesión | Biblioteca |
 | `/papelera` (+ vaciar con confirmación) | GET, POST | sesión | Biblioteca |
