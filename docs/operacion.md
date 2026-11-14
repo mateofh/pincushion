@@ -2,7 +2,7 @@
 
 Guía para quien administra una instancia. Todo el estado vive en **un archivo SQLite** (`DATABASE_PATH`, con modo WAL: junto a él aparecen `-wal` y `-shm`). Los favicons también están dentro de la DB, así que una copia de ese archivo es una copia completa.
 
-Marcas "(pendiente de verificar)": dependen de trabajo de otros streams que aún no estaba en la rama donde se escribió esta guía.
+Los comandos de esta guía se ejecutaron en un clon limpio. Recuerda que `npm run db:backup` y `npm run db:restore` solo leen `DATABASE_PATH` del entorno (no de `.env`): si usas una ruta distinta de `./data/pincushion.db`, expórtala antes.
 
 ## Backup
 
@@ -34,7 +34,15 @@ db.exec(\"VACUUM INTO '/ruta/backups/pincushion.db'\");
 
 **No copies solo el `.db` con `cp` mientras la app corre**: puedes perder lo que aún está en el `-wal`.
 
-El plan prevé el script `npm run db:backup` (lo entrega el stream de ops): **(pendiente de verificar)**; en esta rama no existe.
+### Con el script del proyecto
+
+```bash
+npm run db:backup                           # <carpeta de la DB>/backups/pincushion-<fecha>.db
+npm run db:backup -- --out /ruta/copia.db   # destino propio (no debe existir)
+npm run db:backup -- --keep 14              # copias pincushion-*.db que se conservan (7 por defecto; 0 = no borrar)
+```
+
+Hace la copia con `VACUUM INTO`, abre la copia para comprobar `integrity_check` y que tiene las mismas tablas, la descarta si algo falla e imprime los conteos (usuarios, enlaces…). La rotación solo borra copias `pincushion-*.db` del directorio destino: nunca `pre-migrate-*` ni `pre-restore-*`. No pide `APP_SECRET`. En Docker: `docker exec <contenedor> node --disable-warning=ExperimentalWarning scripts/backup.ts --keep 7`.
 
 Recomendación: copia diaria a otro disco o servicio, conservando al menos 7 diarias. Guarda también `APP_SECRET` en un gestor de secretos: sin él los tokens del bookmarklet no se pueden verificar (ver más abajo).
 
@@ -44,11 +52,16 @@ Recomendación: copia diaria a otro disco o servicio, conservando al menos 7 dia
 
 ## Restauración
 
+### Con el script del proyecto
+
 1. Detén la app (`SIGTERM`).
-2. Aparta la DB actual por si acaso: mueve `pincushion.db`, `pincushion.db-wal` y `pincushion.db-shm`.
-3. Copia el backup a `DATABASE_PATH` (renombrándolo si hace falta). Borra cualquier `-wal`/`-shm` antiguo: la copia no los necesita.
-4. Si el backup es de una versión anterior del esquema: `npm run db:migrate`.
-5. Arranca la app y comprueba `GET /healthz`.
+2. `npm run db:restore -- --from /ruta/copia.db`. El script valida la copia (`integrity_check` y tablas de Pincushion), guarda la base actual en `<carpeta de la DB>/backups/pre-restore-<fecha>.db`, borra el `-wal`/`-shm` viejos y reemplaza el archivo de forma atómica. Si el `-wal` se modificó hace menos de 10 s, se niega (la app parece activa); detén la app o usa `--force`.
+3. Si imprime "Atención: la copia tiene migraciones pendientes", ejecuta `npm run db:migrate`.
+4. Arranca la app y comprueba `GET /healthz`.
+
+### A mano
+
+Con la app parada: mueve aparte `pincushion.db`, `pincushion.db-wal` y `pincushion.db-shm`, copia el backup a `DATABASE_PATH` y no dejes ningún `-wal`/`-shm` antiguo (la copia no los necesita). Después `npm run db:migrate` si el backup es de un esquema anterior y comprueba `/healthz`.
 
 Las sesiones y el token del bookmarklet viven en la DB: tras restaurar, vuelven al estado del backup (sesiones iniciadas después de esa fecha dejan de valer; se vuelve a entrar).
 
@@ -62,7 +75,7 @@ Las sesiones y el token del bookmarklet viven en la DB: tras restaurar, vuelven 
 | Eventos de auditoría (login ok/fallido, sesiones revocadas, token rotado, contraseña cambiada) | 365 días | Mantenimiento. La tabla es inmutable: no admite UPDATE. |
 | Favicons | Mientras haya enlaces de ese dominio | Se purgan cuando no queda ningún enlace del dominio, y en cascada al borrar un usuario. |
 
-El mantenimiento corre cada hora dentro del proceso (si `JOBS_INLINE_WORKER=1`). **(pendiente de verificar)**: en la rama donde se escribió esto `runMaintenance` es un esqueleto; lo implementa el stream de integraciones. No se borran copias de seguridad automáticamente.
+El mantenimiento corre cada hora dentro del proceso (si `JOBS_INLINE_WORKER=1`); también puedes lanzarlo una vez con `npm run jobs:once`, que además procesa la cola de metadatos vencida (recuerda exportar el entorno: ese script no lee `.env`) e imprime un resumen (`trashedPurged`, `sessionsPurged`…). Ejecutado en un clon limpio, purgó el enlace de la papelera de más de 30 días que trae el seed. No se borran copias de seguridad automáticamente (salvo la rotación de `db:backup`).
 
 ## Salud: `/healthz`
 
@@ -97,14 +110,14 @@ Para ver errores: `npm start | jq 'select(.level=="error")'` (o el equivalente e
 
 - `npm run db:migrate` aplica lo pendiente, con copia previa `VACUUM INTO` en `<carpeta de la DB>/backups/pre-migrate-<fecha>.db`.
 - Son **solo hacia adelante**. Para revertir un despliegue que migró: detén la app, restaura `pre-migrate-*.db` como indica la sección de restauración y arranca la versión anterior del código. Se pierde lo escrito después de la migración.
-- Despliega siempre en este orden: parar → actualizar código → `npm run build` → `npm run db:migrate` → arrancar.
+- Despliega siempre en este orden: parar → actualizar código → `npm run build` → `npm run db:migrate` → arrancar. Con `NODE_ENV=production` la app no migra sola y se niega a arrancar con migraciones pendientes; sin esa variable las aplica al crearse, sin copia previa.
 
 ## Rotar `APP_SECRET`
 
 1. Genera uno nuevo: `openssl rand -hex 32` (mínimo 32 caracteres).
 2. Cámbialo en el entorno y reinicia.
 
-**Consecuencia**: el secreto del token del bookmarklet se deriva de `APP_SECRET` y no se guarda, así que **todos los bookmarklets instalados dejan de funcionar** ("Este bookmarklet ya no es válido"). Cada persona debe volver a `/bookmarklet`, rotar el token e instalar el nuevo. Las sesiones del navegador no dependen de `APP_SECRET` (en la DB solo hay el hash del token de sesión) **(pendiente de verificar al integrar el stream de seguridad)**; si se invalidaran, bastaría con volver a entrar.
+**Consecuencia**: el secreto del token del bookmarklet se deriva de `APP_SECRET` y no se guarda, así que **todos los bookmarklets instalados dejan de funcionar** ("Este bookmarklet ya no es válido"). Cada persona debe volver a `/bookmarklet`, rotar el token e instalar el nuevo. Las sesiones del navegador no dependen de `APP_SECRET` (en la DB solo hay el hash SHA-256 del token de sesión), así que siguen valiendo; si se invalidaran, bastaría con volver a entrar.
 
 ## Recuperación de fallos comunes
 
@@ -118,4 +131,4 @@ Para ver errores: `npm start | jq 'select(.level=="error")'` (o el equivalente e
 
 **La app no arranca con "Configuración inválida: …"**: revisa la variable que nombra el mensaje (por ejemplo `APP_SECRET debe tener al menos 32 caracteres`) contra la tabla del README.
 
-**Olvidé la contraseña**: no hay recuperación por email. Si no hay otra vía, crea otro usuario con `npm run user:create` o restaura una sesión activa; (pendiente de verificar: si habrá un comando para restablecer contraseña, hoy no existe).
+**Olvidé la contraseña**: no hay recuperación por email ni comando para restablecerla. Si tienes otra sesión abierta, cámbiala en Ajustes; si no, crea otro usuario con `npm run user:create` (sus enlaces serán otros).
