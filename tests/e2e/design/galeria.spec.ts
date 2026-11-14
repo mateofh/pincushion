@@ -32,7 +32,7 @@ test('sin sesión la galería no se sirve (404 o redirección a entrar)', async 
 
 test('axe: sin violaciones serias ni críticas (escritorio)', async ({ signedIn: page }) => {
   await page.goto(GALERIA);
-  const { violations } = await new AxeBuilder({ page }).withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa', 'wcag22aa']).analyze();
+  const { violations } = await new AxeBuilder({ page: page as never }).withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa', 'wcag22aa']).analyze();
   const graves = violations.filter((v) => v.impact === 'serious' || v.impact === 'critical');
   expect(graves.map((v) => `${v.id}: ${v.nodes.map((n) => n.target.join(' ')).slice(0, 4).join(' | ')}`)).toEqual([]);
 });
@@ -41,7 +41,7 @@ test('axe: sin violaciones serias ni críticas (móvil 360 px)', async ({ signed
   await page.setViewportSize({ width: 360, height: 800 });
   await page.goto(GALERIA);
   await page.locator('details.mf summary').click();
-  const { violations } = await new AxeBuilder({ page }).withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa', 'wcag22aa']).analyze();
+  const { violations } = await new AxeBuilder({ page: page as never }).withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa', 'wcag22aa']).analyze();
   const graves = violations.filter((v) => v.impact === 'serious' || v.impact === 'critical');
   expect(graves.map((v) => `${v.id}: ${v.nodes.map((n) => n.target.join(' ')).slice(0, 4).join(' | ')}`)).toEqual([]);
 });
