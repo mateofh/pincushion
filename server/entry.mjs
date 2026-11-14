@@ -5,6 +5,13 @@ import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
 import sirv from 'sirv';
 
+// Carga ./.env antes de leer PORT/HOST (las variables ya definidas en el entorno tienen prioridad).
+try {
+  process.loadEnvFile('.env');
+} catch (err) {
+  if (err?.code !== 'ENOENT') throw err;
+}
+
 const root = dirname(fileURLToPath(import.meta.url));
 const outDir = process.env.ASTRO_OUT_DIR ? join(process.cwd(), process.env.ASTRO_OUT_DIR) : join(root, '..', 'dist');
 const { handler } = await import(join(outDir, 'server', 'entry.mjs'));

@@ -25,8 +25,7 @@ npm ci
 cp .env.example .env
 # Edita .env y cambia APP_SECRET por uno propio:  openssl rand -hex 32
 
-# Carga .env en tu shell (ver la nota de abajo) y prepara la base de datos
-set -a; . ./.env; set +a
+# Prepara la base de datos (todos los comandos leen ./.env solos)
 npm run db:migrate
 npm run db:seed            # opcional: datos y usuarios demo (alice, bob, dana)
 npm run build
@@ -35,7 +34,7 @@ npm start                  # http://localhost:4321
 
 Para desarrollo con recarga en caliente usa `npm run dev` en lugar de `build` + `start`. Sin seed, crea tu usuario: `npm run user:create -- --email tu@correo.com --password 'una-contraseña-larga'`. No hay registro público: los usuarios se crean por línea de comandos. `user:create` pide una contraseña de 10 a 200 caracteres y acepta `--timezone Europe/Madrid` (por defecto `UTC`).
 
-**Sobre `.env`.** `db:migrate`, `db:seed` y `user:create` leen `./.env` por sí solos (desde el directorio donde ejecutas el comando). **`npm start`, `npm run dev` y `npm run jobs:once` no lo leen** (limitación conocida, ver al final): por eso el bloque de arriba lo exporta con `set -a; . ./.env; set +a` antes de todo. `db:backup` y `db:restore` solo miran `DATABASE_PATH` del entorno (por defecto `./data/pincushion.db`), así que si cambiaste esa ruta en `.env` también necesitan la variable exportada. Alternativa para arrancar: `node --env-file=.env --disable-warning=ExperimentalWarning server/entry.mjs`.
+**Sobre `.env`.** Todos los comandos (`npm start`, `npm run dev`, `db:*`, `user:create`, `jobs:once`) leen `./.env` del directorio donde los ejecutas. Las variables que ya estén definidas en el entorno (por ejemplo, las de tu gestor de procesos) tienen prioridad sobre `.env`.
 
 `APP_ORIGIN` debe coincidir con la dirección que escribes en el navegador (incluido el puerto): si cambias `PORT`, cambia también `APP_ORIGIN`, o los formularios responderán 403 por la comprobación de `Origin`.
 
@@ -126,7 +125,6 @@ Pincushion es **un proceso Node**:
 ```bash
 npm ci
 npm run build
-set -a; . ./.env; set +a   # o las variables del gestor de procesos
 NODE_ENV=production npm run db:migrate
 NODE_ENV=production npm start        # node server/entry.mjs
 ```
@@ -216,7 +214,6 @@ El diseño sigue el sistema de Mateo Folador. Cómo se aplica y dónde se ajusta
 - Un solo proceso y un solo archivo SQLite; no hay alta disponibilidad.
 - Sin registro público ni borrado de cuenta desde la interfaz; los usuarios se crean con `npm run user:create`.
 - Sin recuperación de contraseña por email: se cambia en Ajustes con la sesión iniciada. No hay comando para restablecerla: si la pierdes y no tienes otra sesión, crea otro usuario con `npm run user:create`.
-- **`npm start`, `npm run dev` y `npm run jobs:once` no cargan `./.env`** (sí lo hacen `db:migrate`, `db:seed` y `user:create`): la causa es que `createApp` en `src/server/context.ts` pasa `process.env` a `loadConfig`, que solo lee `.env` cuando no recibe entorno. Hasta que se corrija, exporta las variables en el shell. Sin ello `npm start` arranca pero responde 500 con "Configuración inválida: APP_SECRET".
 - El Dockerfile no se ha podido construir en el entorno de redacción de esta documentación.
 - Sin pruebas automáticas dedicadas para las cabeceras de seguridad (CSP/HSTS), `/healthz` ni la redacción de logs; las cabeceras y `/healthz` se comprobaron a mano.
 - Las pruebas con personas, lector de pantalla y navegadores reales son manuales.
