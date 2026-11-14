@@ -29,7 +29,7 @@ export interface CreateAppOptions {
 }
 
 export function createApp(opts: CreateAppOptions = {}): App {
-  const config = loadConfig(opts.env ?? process.env);
+  const config = loadConfig(opts.env);
   const log = opts.log ?? createLogger(config.LOG_LEVEL);
   const db = opts.db ?? openDb(config.DATABASE_PATH);
   if (opts.autoMigrate) migrate(db);

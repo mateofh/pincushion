@@ -22,10 +22,10 @@ export function originAllowed(i: OriginCheckInput): boolean {
   if (site === 'cross-site' || site === 'same-site') return false;
   // Con `Referrer-Policy: no-referrer` los navegadores mandan `Origin: null` en los POST de formularios
   // del propio sitio: 'null' cuenta como ausente y decide Sec-Fetch-Site.
-  if (i.origin !== null && i.origin !== '' && i.origin !== 'null') {
-    if (i.origin === i.appOrigin) return true;
-    return Boolean(i.dev && site === 'same-origin');
-  }
+  // Sec-Fetch-Site lo pone el navegador y ningún otro sitio puede falsificarlo: 'same-origin' basta,
+  // también detrás de un proxy inverso que sirva la app con otro origen (el token CSRF se exige igual).
+  if (site === 'same-origin') return true;
+  if (i.origin !== null && i.origin !== '' && i.origin !== 'null') return i.origin === i.appOrigin;
   // Sin Origin útil: los navegadores modernos mandan Sec-Fetch-Site; 'same-origin' o 'none' (acción del usuario) valen.
   return site === null || site === '' || site === 'same-origin' || site === 'none';
 }

@@ -26,8 +26,14 @@ describe('originAllowed', () => {
     expect(originAllowed({ ...base, method: 'POST', origin: null, secFetchSite: 'none' })).toBe(true);
     expect(originAllowed({ ...base, method: 'POST', origin: null, secFetchSite: null })).toBe(true);
   });
-  it('en desarrollo acepta same-origin con otro host (127.0.0.1 vs localhost)', () => {
+  it('acepta same-origin aunque el Origin no sea APP_ORIGIN (proxy inverso, 127.0.0.1 vs localhost)', () => {
     expect(originAllowed({ ...base, method: 'POST', origin: 'http://127.0.0.1:4321', secFetchSite: 'same-origin', dev: true })).toBe(true);
-    expect(originAllowed({ ...base, method: 'POST', origin: 'http://127.0.0.1:4321', secFetchSite: 'same-origin' })).toBe(false);
+    expect(originAllowed({ ...base, method: 'POST', origin: 'https://proxy.example', secFetchSite: 'same-origin' })).toBe(true);
+  });
+
+  it('sigue rechazando otros sitios aunque digan el Origin correcto o falte Sec-Fetch-Site', () => {
+    expect(originAllowed({ ...base, method: 'POST', origin: 'https://evil.example', secFetchSite: 'cross-site' })).toBe(false);
+    expect(originAllowed({ ...base, method: 'POST', origin: 'https://evil.example', secFetchSite: null })).toBe(false);
+    expect(originAllowed({ ...base, method: 'POST', origin: 'https://evil.example', secFetchSite: 'same-site' })).toBe(false);
   });
 });

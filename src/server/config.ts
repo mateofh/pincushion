@@ -16,6 +16,10 @@ const schema = z.object({
   METADATA_MAX_BYTES: z.coerce.number().int().min(10000).max(10_000_000).default(1_500_000),
   EXCERPT_MAX_CHARS: z.coerce.number().int().min(200).max(8000).default(8000),
   RATE_LIMIT_LOGIN_PER_MIN: z.coerce.number().int().min(1).max(10000).default(5),
+  /** Capturas reales con Chromium sin JavaScript cuando la página no publica og:image. */
+  SCREENSHOTS: z.enum(['on', 'off']).default('on'),
+  /** Ruta del ejecutable de Chromium para las capturas (vacío = el de Playwright). */
+  CHROMIUM_PATH: z.string().default(''),
   PINCUSHION_TEST_MODE: bool.default(false),
   /** Solo con PINCUSHION_TEST_MODE: host:puerto locales que el fetcher puede visitar (separados por coma). */
   METADATA_TEST_HOSTS: z.string().default(''),

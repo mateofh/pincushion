@@ -2,7 +2,7 @@
 
 Lo automatizable está en Playwright (`npm test`). Este guion cubre lo que **no se puede automatizar**: el bookmarklet instalado en navegadores reales, lectores de pantalla y sesiones con personas. Origen: `docs/PLAN.md`, sección "Plan de pruebas de UX y navegación", punto 7.
 
-**Antes de empezar**: instancia accesible desde cada dispositivo (con `APP_ORIGIN` correcto), usuarios demo (`alice`, `bob`, `dana`; contraseña `pincushion-demo`, ver README; el seed está pendiente de verificar) y `/healthz` en verde. Para las sesiones con personas usa **`dana`** (cuenta vacía), o crea un usuario nuevo con `npm run user:create`.
+**Antes de empezar**: instancia accesible desde cada dispositivo (con `APP_ORIGIN` correcto), usuarios demo cargados con `npm run db:seed` (`alice@example.com`, `bob@example.com`, `dana@example.com`; contraseña `pincushion-demo`, ver README) y `/healthz` en verde. Para las sesiones con personas usa **`dana`** (cuenta vacía), o crea un usuario nuevo con `npm run user:create`.
 
 **Meta global**: al menos 80 % de éxito sin ayuda en las 5 tareas y SUS medio de 75 o más.
 
@@ -16,7 +16,7 @@ Requisito: haber iniciado sesión y abrir `/bookmarklet`.
 
 | Navegador | Pasos | Resultado esperado |
 |---|---|---|
-| Chrome | Muestra la barra de favoritos (`Ctrl/Cmd+Shift+B`). Arrastra el enlace de `/bookmarklet` a la barra. | Aparece un favorito "Guardar en Pincushion". |
+| Chrome | Muestra la barra de favoritos (`Ctrl/Cmd+Shift+B`). Arrastra el enlace de `/bookmarklet` a la barra. | Aparece un favorito "+ Pincushion". |
 | Firefox | Muestra la barra (`Ctrl+Shift+B`). Arrastra el enlace a la barra. | Igual. |
 | Safari (macOS) | Muestra la barra (Visualización > Mostrar barra de favoritos). Arrastra el enlace. | Igual. |
 
@@ -33,14 +33,16 @@ Para cada uno:
 ### Móvil (copiar y pegar)
 
 **Safari iOS**
-1. En Safari abre cualquier página y guárdala como favorito (Compartir > Añadir marcador). Edita ese marcador.
-2. En otra pestaña abre `/bookmarklet`, usa "Copiar código".
-3. Edita el marcador: nombre "Guardar en Pincushion", y pega el código en la dirección (sustituye la URL).
-4. Abre una página, abre Favoritos y toca el marcador.
+1. En Safari abre cualquier página y añádela a marcadores (Compartir > «Añadir marcador»).
+2. En otra pestaña abre `/bookmarklet`, abre "En el móvil" > "iPhone o iPad (Safari)" y usa "Copiar código".
+3. En Marcadores pulsa «Editar» y entra en el marcador que creaste.
+4. Cambia el nombre a "+ Pincushion" y pega el código en la dirección (sustituye la URL).
+5. Abre una página, abre Marcadores y toca "+ Pincushion".
 
 **Chrome Android**
-1. Marca una página con la estrella. Edita el favorito, cambia el nombre y pega el código como URL.
-2. Para usarlo, escribe el nombre del favorito en la barra de direcciones y selecciónalo (Chrome Android no muestra la barra de favoritos en la página).
+1. Copia el código desde `/bookmarklet` > "En el móvil" > "Android (Chrome)".
+2. Guarda una página como marcador (menú ⋮, estrella). Edítalo desde Marcadores: nombre "+ Pincushion" y el código como URL.
+3. Para usarlo, escribe "Pincushion" en la barra de direcciones y toca el marcador sugerido (Chrome Android no ejecuta marcadores desde el menú).
 
 En ambos: ¿el popup cabe en pantalla?, ¿se entiende sin zoom?, ¿el guardado aparece luego en la Biblioteca desde otro dispositivo?
 
@@ -87,7 +89,7 @@ Recorre **Biblioteca, Guardar, Buscar y Bookmarklet** y puntúa cada heurística
 
 ### Prueba de 5 segundos de la Biblioteca vacía
 
-Con 5 personas distintas (pueden ser las mismas de las sesiones, antes de empezar): inicia sesión como `dana`, muestra la Biblioteca vacía **5 segundos**, oculta la pantalla y pregunta: "¿Qué harías primero?" y "¿Para qué sirve esto?". Éxito: dicen algo equivalente a instalar el bookmarklet o pegar un enlace.
+Con 5 personas distintas (pueden ser las mismas de las sesiones, antes de empezar): inicia sesión como `dana@example.com`, muestra la Biblioteca vacía **5 segundos**, oculta la pantalla y pregunta: "¿Qué harías primero?" y "¿Para qué sirve esto?". Éxito: dicen algo equivalente a instalar el bookmarklet o pegar un enlace.
 
 ---
 
@@ -114,7 +116,7 @@ Reglas del moderador: no explicar botones ni textos; no sugerir; si preguntan "�
 
 ### Datos preparados
 
-Una cuenta limpia (`dana` o un usuario nuevo) con el bookmarklet **sin instalar**. Para las tareas 2 a 4 usa una cuenta con enlaces (`alice`, con unos 25 enlaces del seed; la importación no existe en esta versión) en otro perfil de navegador. Elige antes la frase de la tarea 3 (que aparezca solo en el texto guardado de un artículo) y un enlace para borrar en la tarea 4.
+Una cuenta limpia (`dana` o un usuario nuevo) con el bookmarklet **sin instalar**. Para las tareas 2 a 4 usa una cuenta con enlaces (`alice@example.com`, con 26 enlaces del seed; la importación no existe en esta versión) en otro perfil de navegador. Elige antes la frase de la tarea 3 (que aparezca solo en el texto guardado de un artículo) y un enlace para borrar en la tarea 4.
 
 ### Las 5 tareas
 
