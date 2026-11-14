@@ -29,7 +29,7 @@ export function takeFlash(cookies: AstroCookies, config: Config): Flash | null {
   const name = cookieName(config, 'pc_flash');
   const raw = cookies.get(name)?.value;
   if (!raw) return null;
-  cookies.delete(name, { path: '/' });
+  cookies.delete(name, { path: '/', secure: config.secureCookies, httpOnly: true, sameSite: 'lax' });
   const [body, sig] = raw.split('.');
   if (!body || !sig || !safeEqual(sig, hmac(subkey(config.APP_SECRET, 'flash'), body))) return null;
   try {
